@@ -23,4 +23,19 @@
             "snippet": "ns-template"
         },
     ],
+    "bitburner.authToken": "73lfn2J0H5chIaXfkJhAw8LMLtm8YTclTp9ASWt5xSU3mwJIkr3cB1hMBhqnDtgn",
+    "bitburner.showFileWatcherEnabledNotification": true,
+    "bitburner.showPushSuccessNotification": true,
+    "cSpell.words": [
+        "brutessh",
+        "ftpcrack",
+        "httpworm",
+        "pserv",
+        "relaysmtp",
+        "Rootable",
+        "sqlinject",
+        "tprint",
+        "tprintf"
+    ],
+    "bitburner.fileWatcher.enable": true,
 }

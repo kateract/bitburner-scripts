@@ -22,7 +22,7 @@ Write all your typescript source code in the `/src` directory
 
 To autocompile as you save, run `npm run watch` in a terminal
 
-To update your Netscript Definitions, run `npm run defs` in a terminal
+To update your Netscript Definitions: NS, run `npm run defs` in a terminal
 
 Press F1 and Select `Bitburner: Enable File Watcher` to enable auto uploading to the game
 
