@@ -2,14 +2,14 @@
 /** @param {NS} ns **/
 export class ServerInfo {
   hostname = "";
-  isAdmin = false;
-  hackLevel = 0;
-  rootPorts = 0;
-  securityLevel = 0;
-  minSecurityLevel = 0;
-  growthFactor = 0;
-  money = 0;
-  maxMoney = 0;
-  ram = 0;
-  isPurchased = false;
+  hasAdminRights = false;
+  requiredHackingSkill = 0;
+  numOpenPortsRequired = 0;
+  hackDifficulty = 0;
+  minDifficulty = 0;
+  serverGrowth = 0;
+  moneyAvailable = 0;
+  moneyMax = 0;
+  maxRam = 0;
+  purchasedByPlayer = false;
 }

@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { getRatios, getServerInfo, maximizeRatios, printServerSummary } from '/functions';
+import { getRatios, maximizeRatios, printServerSummary } from '/functions';
 import { prepareServer } from '/prepareServer';
 
 export async function main(ns : NS) : Promise<void> {
@@ -19,10 +19,10 @@ export async function main(ns : NS) : Promise<void> {
         await ns.sleep(1000);
       }
     }
-    let targetInfo = getServerInfo(ns, target);
-    const hostInfo = getServerInfo(ns, host);
-    const ratios = hostInfo.isPurchased ? await maximizeRatios(ns, targetInfo, hostInfo, false) : getRatios(ns, target, hackThreads);
-    if (targetInfo.maxMoney > targetInfo.money || targetInfo.securityLevel > targetInfo.minSecurityLevel)
+    let targetInfo = ns.getServer( target);
+    const hostInfo = ns.getServer( host);
+    const ratios = hostInfo.purchasedByPlayer ? await maximizeRatios(ns, targetInfo, hostInfo, false) : getRatios(ns, target, hackThreads);
+    if (targetInfo.moneyMax > targetInfo.moneyAvailable || targetInfo.hackDifficulty > targetInfo.minDifficulty)
     {
       ns.tprintf("Shortfall detected on %s, re-preparing...", targetInfo.hostname)
       //printServerSummary(ns, targetInfo)
@@ -38,14 +38,14 @@ export async function main(ns : NS) : Promise<void> {
       pids.push(ns.exec("hack.js",host , ratios.hackThreads, target));
       await ns.sleep(ns.getHackTime(target));
       await ns.sleep(1500)
-      targetInfo = getServerInfo(ns, targetInfo.hostname);
-      if(targetInfo.securityLevel > targetInfo.minSecurityLevel){
+      targetInfo = ns.getServer( targetInfo.hostname);
+      if(targetInfo.hackDifficulty > targetInfo.minDifficulty){
         ns.tprintf("Hack Weaken not strong enough:")
         printServerSummary(ns, targetInfo)
       }
       await ns.sleep(2000)
-      targetInfo = getServerInfo(ns, targetInfo.hostname);
-      if(targetInfo.securityLevel > targetInfo.minSecurityLevel || targetInfo.maxMoney > targetInfo.money)
+      targetInfo = ns.getServer( targetInfo.hostname);
+      if(targetInfo.hackDifficulty > targetInfo.minDifficulty || targetInfo.moneyMax > targetInfo.moneyAvailable)
       {
         ns.tprintf("Grow Weaken or Grow amount not enough:");
         printServerSummary(ns, targetInfo)

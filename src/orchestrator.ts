@@ -1,22 +1,21 @@
-import { NS, ProcessInfo } from '@ns'
-import { findIndex } from 'lodash';
-import { deployDispatcher, explore, isHackable, killProcesses, populateServer, compare, maximizeRatios, getServerInfo } from '/functions'
-import { ServerInfo } from 'c:/Users/brian/source/repos/bitburner-scripts/src/ServerInfo';
+import { NS, ProcessInfo, Server } from '@ns'
+import { deployDispatcher, explore, isHackable, killProcesses, populateServer, compare, maximizeRatios } from '/functions'
+
 
 
 interface ProcessInfoExt extends ProcessInfo {
-  host: ServerInfo;
-  target: ServerInfo;
+  host: Server;
+  target: Server;
 }
 
 export async function main(ns: NS): Promise<void> {
   const scriptCost = 1.8;
   const servers = await explore(ns, "home");
-  const purchasedServers = servers.filter(s => s.ram > scriptCost && s.isPurchased).sort((a, b) => compare(a.ram, b.ram, true));
-  const threadLimits = purchasedServers.map(s => Math.floor(s.ram / scriptCost));
+  const purchasedServers = servers.filter(s => s.maxRam > scriptCost && s.purchasedByPlayer).sort((a, b) => compare(a.maxRam, b.maxRam, true));
+  const threadLimits = purchasedServers.map(s => Math.floor(s.maxRam / scriptCost));
   let totalThreads = 0;
   const targetServers = servers.filter(s => isHackable(ns, s));
-  targetServers.sort((a, b) => compare(a.hackLevel, b.hackLevel, true))
+  targetServers.sort((a, b) => compare(a.requiredHackingSkill, b.requiredHackingSkill, true))
 
 
   const exists = getExistingProcesses(ns, purchasedServers, targetServers);
@@ -45,7 +44,7 @@ export async function main(ns: NS): Promise<void> {
         //do nothing
       }
       else {
-        targetServers[i] = getServerInfo(ns, targetServers[i].hostname)
+        targetServers[i] = ns.getServer( targetServers[i].hostname)
         const ratio = await maximizeRatios(ns, targetServers[i], purchasedServers[i], false)
         if (ratio) {
           deployDispatcher(ns, "home", purchasedServers[i].hostname, targetServers[i].hostname, ratio);
@@ -60,14 +59,14 @@ export async function main(ns: NS): Promise<void> {
 }
 
 
-function getExistingProcesses(ns: NS, purchasedServers: ServerInfo[], targetServers: ServerInfo[]): ProcessInfoExt[] {
+function getExistingProcesses(ns: NS, purchasedServers: Server[], targetServers: Server[]): ProcessInfoExt[] {
   const exist = ns.ps()
     .filter(p => p.filename === "prepareServer.js"
       || p.filename === "dispatcher.js")
     .map(p => {
       const pe = p as ProcessInfoExt;
-      pe.host = getServerInfo(ns, p.filename === "prepareServer.js" ? p.args[1] : p.args[0]);
-      pe.target = getServerInfo(ns, p.filename === "prepareServer.js" ? p.args[0] : p.args[1]);
+      pe.host = ns.getServer( p.filename === "prepareServer.js" ? p.args[1] : p.args[0]);
+      pe.target = ns.getServer( p.filename === "prepareServer.js" ? p.args[0] : p.args[1]);
       return pe;
     })
     .filter(p => purchasedServers.map(s => s.hostname).includes(p.host.hostname));
@@ -88,7 +87,7 @@ function getExistingProcesses(ns: NS, purchasedServers: ServerInfo[], targetServ
   return exist.filter(p => p.pid > 0);
 }
 
-function prepareServers(ns: NS, purchasedServers: ServerInfo[], targetServers: ServerInfo[], threadLimits: number[], exists: ProcessInfoExt[], preparePIDs: number[]) {
+function prepareServers(ns: NS, purchasedServers: Server[], targetServers: Server[], threadLimits: number[], exists: ProcessInfoExt[], preparePIDs: number[]) {
   for (let i = 0; i < Math.min(purchasedServers.length, targetServers.length); i++) {
     const exist = exists.find(e => e.host == purchasedServers[i])
     if (exist) {

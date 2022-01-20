@@ -1,12 +1,12 @@
 import { NS, ProcessInfo } from '@ns'
 
-import { getServerInfo, killProcesses, populateServer, compare } from './functions';
+import { killProcesses, populateServer, compare } from './functions';
 
 /** @param {NS} ns **/
 export async function main(ns: NS): Promise<void> {
 	const limit = ns.getPurchasedServerLimit();
 	const serverNames = ns.getPurchasedServers()
-	const servers = serverNames.map(s => getServerInfo(ns, s));
+	const servers = serverNames.map(s => ns.getServer( s));
 	servers.sort((a, b) => compare(a.hostname, b.hostname));
 	const levels = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576]
 	const memory = servers.map(s => levels.indexOf(ns.getServerMaxRam(s.hostname)));
@@ -54,7 +54,7 @@ export async function main(ns: NS): Promise<void> {
 				memory[index] = level;
 			}
 			ns.purchaseServer(host, levels[level])
-			servers[index] = getServerInfo(ns, host);
+			servers[index] = ns.getServer( host);
 			await populateServer(ns, host);
 
 			if (ps.length > 0){
