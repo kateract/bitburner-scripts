@@ -3,7 +3,7 @@ import { explore, printServerInfo, isHackable, isRootable, rootServer, populateS
 
 
 /** @param {NS} ns **/
-export async function main(ns: NS): void {
+export async function main(ns: NS): Promise<void> {
 	const servers = await explore(ns, 'home');
 	servers.sort((a, b) => a.hackLevel - b.hackLevel)
 	ns.tprintf("%-d Servers Probed", servers.length);
@@ -14,20 +14,20 @@ export async function main(ns: NS): void {
 		//ns.tprint(s);
 		const success = rootServer(ns, s);
 		if (success) {
-			ns.tprintf("Successfully rooted %s", s.server);
-			s.admin = true;
+			ns.tprintf("Successfully rooted %s", s.hostname);
+			s.isAdmin = true;
 		}
 	});
 	if (ns.args.length > 0) {
-		const target = getServerInfo(ns, ns.args[0])
-		const hackTime = ns.getHackTime(target.server);
-		const growTime = ns.getGrowTime(target.server);
-		const weakenTime = ns.getWeakenTime(target.server) * 2;
-		const adminServers = servers.filter(s => s.admin)
+		const target = getServerInfo(ns, ns.args[0].toString())
+		const hackTime = ns.getHackTime(target.hostname);
+		const growTime = ns.getGrowTime(target.hostname);
+		const weakenTime = ns.getWeakenTime(target.hostname) * 2;
+		const adminServers = servers.filter(s => s.isAdmin)
 		for (const server of adminServers) {
 			await populateServer(ns, server);
 			killProcesses(ns, server);
-			await macaroni(ns, server, target.server, hackTime, weakenTime, growTime);
+			await macaroni(ns, server, target.hostname, hackTime, weakenTime, growTime);
 		}
 	}
 
