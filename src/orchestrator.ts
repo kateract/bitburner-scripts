@@ -15,7 +15,7 @@ export async function main(ns: NS): Promise<void> {
   const threadLimits = purchasedServers.map(s => Math.floor(s.maxRam / scriptCost));
   let totalThreads = 0;
   const targetServers = servers.filter(s => isHackable(ns, s));
-  targetServers.sort((a, b) => compare(a.requiredHackingSkill, b.requiredHackingSkill, true))
+  targetServers.sort((a, b) => compare(a.moneyMax, b.moneyMax, true))
 
 
   const exists = getExistingProcesses(ns, purchasedServers, targetServers);
