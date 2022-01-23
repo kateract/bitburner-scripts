@@ -6,5 +6,5 @@ export class ThreadRatios {
   public hackTime = 0;
   public growTime = 0;
   public weakenTime = 0;
-  //public get totalThreads(): number { return Math.ceil(this.hackThreads) + Math.ceil(this.growthThreads) + Math.ceil(this.weakenHackThreads) + Math.ceil(this.weakenGrowthThreads); }
+  public get totalThreads(): number { return Math.ceil(this.hackThreads) + Math.ceil(this.growthThreads) + Math.ceil(this.weakenHackThreads) + Math.ceil(this.weakenGrowthThreads); }
 }

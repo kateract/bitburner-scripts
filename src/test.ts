@@ -1,6 +1,6 @@
 import { NS } from '@ns'
+import { newMaximize } from '/tools/ratios'
 
 export async function main(ns : NS) : Promise<void> {
-  ns.tprint(ns.nFormat(1, "00"));
-  ns.getServer( "home");
+  newMaximize(ns, "foodnstuff", 40)
 }

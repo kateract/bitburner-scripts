@@ -1,11 +1,12 @@
 import { NS } from '@ns'
-import { deployDispatcher,getRatios, printRatios } from '/functions';
-import { prepareServer } from '/prepareServer';
+import { deployDispatcher } from '/lib/functions';
+import { prepareServer } from '/tools/prepareServer';
+import { getRatios, printRatios } from '/tools/ratios'
 
 export async function main(ns : NS) : Promise<void> {
   const target = ns.getServer( ns.args[0].toString());
   const host = ns.getServer( ns.getHostname());
-  await prepareServer(ns, host, target, 1000)
+  await prepareServer(ns, host, target, (host.maxRam - host.ramUsed)/2 < 5000 ? (host.maxRam - host.ramUsed)/2 : 5000)
   const multiplier = ns.args.length > 1 && !isNaN(ns.args[1] as number) ? ns.args[1] as number : .5
   let threads = 0
   if (multiplier >= 1) {

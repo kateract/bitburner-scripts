@@ -1,5 +1,5 @@
 import { NS, Server } from '@ns'
-import { printServerInfo } from './functions'
+import { printServerInfo } from '/lib/visualize'
 
 export async function main(ns: NS): Promise<void> {
   const target = ns.getServer( ns.args[0].toString());
@@ -28,7 +28,7 @@ export async function growToMaximum(ns: NS, host: Server, targetServer: Server, 
     const sw = ns.weakenAnalyze(1);
     const sg = ns.growthAnalyzeSecurity(1);
     if (threadLimit == 0) host = ns.getServer( host.hostname);
-    const weakenThreads =  ((threadLimit > 0 ? threadLimit : ((host.maxRam/1.75) - 1)) / ((sw / sg) + 1));
+    const weakenThreads =  Math.ceil((threadLimit > 0 ? threadLimit : ((host.maxRam/1.75) - 1)) / ((sw / sg) + 1));
     const growThreads = (threadLimit > 0 ? threadLimit : ((host.maxRam/1.75) - 1)) - weakenThreads;
     if (printInfo)
       ns.tprintf("Growing %s with %d grow threads and %d weaken threads", targetServer.hostname, growThreads, weakenThreads);
@@ -36,7 +36,7 @@ export async function growToMaximum(ns: NS, host: Server, targetServer: Server, 
     ns.exec("weaken.js", host.hostname, weakenThreads, targetServer.hostname);
     const weakenTime = ns.getWeakenTime(targetServer.hostname);
     if (printInfo)
-      ns.tprintf("Waiting %0.0f seconds for weaken", weakenTime / 1000);
+      ns.tprintf("Waiting %s for weaken", ns.tFormat(weakenTime,false));
     await ns.sleep(weakenTime + 1000);
     targetServer = ns.getServer( targetServer.hostname);
     if (printInfo)
@@ -60,7 +60,7 @@ export async function weakenToMinimum(ns: NS, host: Server, target: Server, thre
     }
     const weakenTime = ns.getWeakenTime(target.hostname);
     if (printInfo)
-      ns.tprintf("Waiting %0.0f seconds for weaken", weakenTime / 1000);
+      ns.tprintf("Waiting %s seconds for weaken", ns.tFormat(weakenTime, false));
     await ns.sleep(weakenTime + 1000);
     target = ns.getServer( target.hostname);
     if (printInfo)

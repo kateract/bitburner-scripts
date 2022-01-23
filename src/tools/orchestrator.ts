@@ -1,5 +1,7 @@
 import { NS, ProcessInfo, Server } from '@ns'
-import { deployDispatcher, explore, isHackable, killProcesses, populateServer, compare, maximizeRatios } from '/functions'
+import { deployDispatcher, isHackable, killProcesses, populateServer, compare } from '/lib/functions'
+import { explore } from '/tools/explore'
+import { maximizeRatios } from '/tools/ratios'
 
 
 
@@ -35,16 +37,20 @@ export async function main(ns: NS): Promise<void> {
   //wait for a prepare thread to exit
 
   while (preparePIDs.filter(p => p > 0).length > 0) {
-    const procs = ns.ps().filter(p => p.filename === "prepareServer.js").map(p => p.pid);
+    const procs = ns.ps().filter(p => p.filename === "prepareServer.js");
     for (let i = 0; i < preparePIDs.length; i++) {
+      const newProc = procs.find(p => p.args[0] == targetServers[i].hostname && p.args[1] == purchasedServers[i].hostname)
       if (preparePIDs[i] === 0) {
         //do nothing
       }
-      else if (procs.includes(preparePIDs[i])) {
+      else if (preparePIDs[i] == newProc?.pid) {
         //do nothing
       }
+      else if (newProc) {
+        preparePIDs[i] = newProc.pid;
+      }
       else {
-        targetServers[i] = ns.getServer( targetServers[i].hostname)
+        targetServers[i] = ns.getServer(targetServers[i].hostname)
         const ratio = await maximizeRatios(ns, targetServers[i], purchasedServers[i], false)
         if (ratio) {
           deployDispatcher(ns, "home", purchasedServers[i].hostname, targetServers[i].hostname, ratio);
@@ -65,8 +71,8 @@ function getExistingProcesses(ns: NS, purchasedServers: Server[], targetServers:
       || p.filename === "dispatcher.js")
     .map(p => {
       const pe = p as ProcessInfoExt;
-      pe.host = ns.getServer( p.filename === "prepareServer.js" ? p.args[1] : p.args[0]);
-      pe.target = ns.getServer( p.filename === "prepareServer.js" ? p.args[0] : p.args[1]);
+      pe.target = ns.getServer( p.args[0]);
+      pe.host = ns.getServer( p.args[1]);
       return pe;
     })
     .filter(p => purchasedServers.map(s => s.hostname).includes(p.host.hostname));

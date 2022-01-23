@@ -1,5 +1,6 @@
 import { NS } from '@ns'
-import { explore, isHackable, populateServer, compare } from '/functions'
+import { isHackable, populateServer, compare } from '/lib/functions'
+import { explore } from '/tools/explore'
 
 export async function main(ns : NS) : Promise<void> {
   const scriptCost = 1.8;
