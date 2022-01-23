@@ -1,6 +1,6 @@
 import { NS, ProcessInfo } from '@ns'
 
-import { killProcesses, populateServer, compare } from '/lib/functions';
+import { killProcesses, populateServer, compare } from '/functions';
 
 /** @param {NS} ns **/
 export async function main(ns: NS): Promise<void> {

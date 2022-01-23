@@ -1,6 +1,6 @@
 import { NS } from '@ns'
-import { explore } from 'tools/explore'
-import { isHackable } from '/lib/functions';
+import { explore } from '/explore'
+import { isHackable } from '/functions';
 
 export async function main(ns: NS): Promise<void> {
   const servers = await explore(ns, "home");

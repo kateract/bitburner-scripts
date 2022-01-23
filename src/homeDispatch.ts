@@ -1,7 +1,7 @@
 import { NS } from '@ns'
-import { deployDispatcher } from '/lib/functions';
-import { prepareServer } from '/tools/prepareServer';
-import { getRatios, printRatios } from '/tools/ratios'
+import { deployDispatcher } from '/functions';
+import { prepareServer } from '/prepareServer';
+import { getRatios, printRatios } from '/ratios'
 
 export async function main(ns : NS) : Promise<void> {
   const target = ns.getServer( ns.args[0].toString());

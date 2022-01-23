@@ -1,8 +1,8 @@
 import { NS } from '@ns'
-import { compare } from '/lib/functions';
-import { prepareServer } from 'tools/prepareServer';
-import { ThreadRatios } from '/lib/ThreadRatios';
-import { getRatios, maximizeRatios } from 'tools/ratios'
+import { compare } from '/functions';
+import { prepareServer } from '/prepareServer';
+import { ThreadRatios } from '/ThreadRatios';
+import { getRatios, maximizeRatios } from '/ratios'
 
 export async function main(ns: NS): Promise<void> {
   const target = ns.args[0].toString();

@@ -1,5 +1,5 @@
 import { NS, Server } from '@ns'
-import { ThreadRatios } from '/lib/ThreadRatios';
+import { ThreadRatios } from '/ThreadRatios';
 
 export async function main(ns: NS): Promise<void> {
   const target = ns.args[0].toString();

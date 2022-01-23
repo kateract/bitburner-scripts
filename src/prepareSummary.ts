@@ -1,6 +1,6 @@
 import { NS } from '@ns'
-import { compare } from '/lib/functions';
-import { printServerSummary } from '/lib/visualize'
+import { compare } from '/functions';
+import { printServerSummary } from '/visualize'
 
 export async function main(ns : NS) : Promise<void> {
   const targets = ns.ps().filter(p => p.filename == "prepareServer.js").map(p => p.args[0]);

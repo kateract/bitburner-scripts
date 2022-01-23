@@ -1,5 +1,5 @@
 import { NS, Server } from '@ns'
-import { printServerInfo } from '/lib/visualize'
+import { printServerInfo } from '/visualize'
 
 export async function main(ns: NS): Promise<void> {
   const target = ns.getServer( ns.args[0].toString());

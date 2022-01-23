@@ -1,5 +1,5 @@
 import { NS, Server } from '@ns'
-import { isRootable, isHackable } from '/lib/functions';
+import { isRootable, isHackable } from '/functions';
 
 
 export function printServerInfo(ns: NS, serverInfo: Server, rank = 0): void {

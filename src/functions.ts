@@ -1,6 +1,6 @@
 /* eslint-disable no-fallthrough */
 import { NS, Server } from '@ns';
-import { ThreadRatios } from '/lib/ThreadRatios';
+import { ThreadRatios } from '/ThreadRatios';
 
 
 export function isHackable(ns: NS, serverInfo: Server): boolean {

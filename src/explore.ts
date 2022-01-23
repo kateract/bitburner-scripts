@@ -1,6 +1,6 @@
 import { NS, Server } from '@ns'
-import { compare, isHackable, isRootable, rootServer, populateServer, killProcesses, macaroni } from "/lib/functions.js"
-import {printServerInfo} from "/lib/visualize"
+import { compare, isHackable, isRootable, rootServer, populateServer, killProcesses, macaroni } from "/functions.js"
+import {printServerInfo} from "/visualize"
 
 
 /** @param {NS} ns **/

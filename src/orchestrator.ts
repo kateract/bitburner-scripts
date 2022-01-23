@@ -1,7 +1,7 @@
 import { NS, ProcessInfo, Server } from '@ns'
-import { deployDispatcher, isHackable, killProcesses, populateServer, compare } from '/lib/functions'
-import { explore } from '/tools/explore'
-import { maximizeRatios } from '/tools/ratios'
+import { deployDispatcher, isHackable, killProcesses, populateServer, compare } from '/functions'
+import { explore } from '/explore'
+import { maximizeRatios } from '/ratios'
 
 
 
