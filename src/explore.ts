@@ -1,6 +1,6 @@
 import { NS, Server } from '@ns'
-import { compare, isHackable, isRootable, rootServer, populateServer, killProcesses, macaroni } from "/functions.js"
-import {printServerInfo} from "/visualize"
+import { compare, isHackable, isRootable, rootServer, populateServer, killProcesses } from "/functions.js"
+import { printServerInfo } from "/visualize"
 
 
 /** @param {NS} ns **/
@@ -19,31 +19,20 @@ export async function main(ns: NS): Promise<void> {
 			if (success) {
 				ns.tprintf("Successfully rooted %s", s.hostname);
 				s.hasAdminRights = true;
-
-				if (ns.ps(s.hostname).length == 0 && isHackable(ns, s)) {
-					const threads = s.maxRam / ns.getScriptRam("weaken.js");
-					ns.exec("noodles.js", "home", 1, s.hostname, s.minDifficulty, s.moneyMax, threads);
-				}
+				await populateServer(ns, s);
+				// if (ns.ps(s.hostname).length == 0 && isHackable(ns, s) && s.maxRam > 0) {
+				// 	const threads = Math.floor(s.maxRam / ns.getScriptRam("weaken.js"));
+				// 	ns.exec("prepareServer.js", "home", 1, s.hostname, s.hostname, threads);
+				// }
 
 				await ns.sleep(200);
 			}
 		}
-		if (s.hasAdminRights) await populateServer(ns, s);
-	}
-	if (ns.args.length > 0) {
-		const target = ns.getServer(ns.args[0].toString())
-		const hackTime = ns.getHackTime(target.hostname);
-		const growTime = ns.getGrowTime(target.hostname);
-		const weakenTime = ns.getWeakenTime(target.hostname) * 2;
-		const adminServers = servers.filter(s => s.hasAdminRights)
-		for (const server of adminServers) {
-			//await populateServer(ns, server);
-			killProcesses(ns, server);
-			await macaroni(ns, server, target.hostname, hackTime, weakenTime, growTime);
+		else {
+			if (s.hasAdminRights) await populateServer(ns, s);
+			await ns.sleep(200);
 		}
 	}
-
-
 }
 
 /** @param {NS} ns **/
@@ -53,6 +42,7 @@ export async function explore(ns: NS, server: string, oldServer = "", list: Serv
 	const servers = res
 		.filter(f => f != oldServer)
 		.map(f => ns.getServer(f));
+
 	await servers.forEach(async s => {
 		if (!list.find(l => l.hostname === s.hostname)) {
 			list.push(s);

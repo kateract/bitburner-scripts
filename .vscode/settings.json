@@ -32,7 +32,9 @@
         "codingcontracttypes",
         "foodnstuff",
         "ftpcrack",
+        "hacknet",
         "httpworm",
+        "hwgw",
         "mulitplier",
         "Mult",
         "multed",
@@ -44,9 +46,11 @@
         "rele",
         "Rootable",
         "Spiralize",
+        "sprintf",
         "sqlinject",
         "tprint",
-        "tprintf"
+        "tprintf",
+        "vsprintf"
     ],
     "bitburner.fileWatcher.enable": true,
 }

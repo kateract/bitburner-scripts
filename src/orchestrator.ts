@@ -21,7 +21,7 @@ export async function main(ns: NS): Promise<void> {
 
 
   const exists = getExistingProcesses(ns, purchasedServers, targetServers);
-
+  console.log(exists);
   for (let i = 0; i < purchasedServers.length; i++) {
     ns.tprintf("Server: %s  Threads: %d  Target: %s", purchasedServers[i].hostname, threadLimits[i], targetServers[i]?.hostname);
     await populateServer(ns, purchasedServers[i]);
@@ -35,6 +35,19 @@ export async function main(ns: NS): Promise<void> {
 
   prepareServers(ns, purchasedServers, targetServers, threadLimits, exists, preparePIDs);
   //wait for a prepare thread to exit
+  const primaryServers = Math.min(purchasedServers.length, targetServers.length);
+  if (primaryServers < targetServers.length){ 
+    const memReq = Math.max(ns.getScriptRam("prepareServer.js"), ns.getScriptRam("dispatcher.js")) * primaryServers + ns.getScriptRam("orchestrator.js") + ns.getScriptRam("watcher.js");
+    const home = ns.getServer("home");
+    const memFree = Math.floor((home.maxRam - memReq)/5000)
+    for (let i = primaryServers; i < Math.min(primaryServers + memFree, targetServers.length); i++) {
+      //ns.tprint(targetServers[i]);
+      if (!exists.find(p => p.target.hostname == targetServers[i].hostname)){
+        ns.exec("homeDispatch.js", "home", 1, targetServers[i].hostname);
+      }
+      await ns.sleep(200);
+    }
+  }
 
   while (preparePIDs.filter(p => p > 0).length > 0) {
     const procs = ns.ps().filter(p => p.filename === "prepareServer.js");
@@ -94,7 +107,8 @@ function getExistingProcesses(ns: NS, purchasedServers: Server[], targetServers:
 }
 
 function prepareServers(ns: NS, purchasedServers: Server[], targetServers: Server[], threadLimits: number[], exists: ProcessInfoExt[], preparePIDs: number[]) {
-  for (let i = 0; i < Math.min(purchasedServers.length, targetServers.length); i++) {
+  const primaryServers = Math.min(purchasedServers.length, targetServers.length);
+  for (let i = 0; i < primaryServers; i++) {
     const exist = exists.find(e => e.host == purchasedServers[i])
     if (exist) {
       if (exist.filename === "prepareServer.js")

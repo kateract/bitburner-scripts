@@ -2,14 +2,15 @@ import { NS, Server } from '@ns'
 import { ThreadRatios } from '/ThreadRatios';
 
 export async function main(ns: NS): Promise<void> {
-  const target = ns.args[0].toString();
+  const target = ns.getServer(ns.args[0].toString());
+  const threadLimit = ns.args.length > 1 ? ns.args[1] as number : 0
   const multiplier = ns.args.length > 1 && !isNaN(ns.args[1] as number) ? ns.args[1] as number : 1
   let threads = 0
   if (multiplier >= 1) {
     threads = multiplier;
   }
   else {
-    threads = Math.ceil(ns.hackAnalyzeThreads(target, ns.getServer( target).moneyAvailable * multiplier));
+    threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable * multiplier));
   }
   const ratios = getRatios(ns, target, threads);
   printRatios(ns, ratios);
@@ -17,19 +18,31 @@ export async function main(ns: NS): Promise<void> {
   if (ns.serverExists("pserv-00")) {
     pserv = ns.getServer( "pserv-00")
   }
-  const maxRatios = await maximizeRatios(ns, ns.getServer( target), pserv, true)
-  ns.tprintf("Maximum for %s (%d threads)", pserv.hostname, (pserv.maxRam / 1.75) - 1)
-  printRatios(ns, maxRatios);
+  let maxRatios = null;
+  if (threadLimit == 0)
+  {
+    maxRatios = await maximizeRatios(ns, target, pserv, true)
+  } else {
+    maxRatios = await maximize(ns, target, threadLimit);
+  }
+  ns.tprintf("Maximum for %s (%d threads)", pserv.hostname, threadLimit > 0 ? threadLimit : (pserv.maxRam / 1.75) - 1)
+  printRatios(ns, maxRatios as ThreadRatios);
 }
 
 
-export function getRatios(ns: NS, target: string | Server, hackThreads = 1): ThreadRatios {
-  const hostname = (typeof target === "object") ? target.hostname : target;
+export function getRatios(ns: NS, target: Server, hackThreads = 1): ThreadRatios {
+  const hostname = target.hostname;
   const ratios = new ThreadRatios();
+  const cores = 6
   ratios.hackThreads = Math.ceil(hackThreads);
-  const hackAmount = ns.hackAnalyze(hostname) * ratios.hackThreads;
-  //ns.tprint(hackAmount);
-  ratios.growthThreads = ns.growthAnalyze(hostname, 1.1 / (1 - hackAmount)) + 1;
+  let hackAmount = ns.hackAnalyze(hostname) * ratios.hackThreads;
+  if (hackAmount >= .999) {
+    ratios.hackThreads = ns.hackAnalyzeThreads(hostname, target.moneyAvailable * .9);
+    ns.tprintf("Hack amount greater than 99.9%%(%s) , reducing to %d threads (from %d)", ns.nFormat(hackAmount, "0.000000"), ratios.hackThreads, hackThreads);
+    hackAmount = ns.hackAnalyze(hostname) * ratios.hackThreads;
+  }
+  ratios.growthThreads = ns.growthAnalyze(hostname, Math.min(1 / (1 - hackAmount), 10.5)) + 1;
+  
   const weakenSecurityAmount = ns.weakenAnalyze(1);
   ratios.weakenHackThreads = ns.hackAnalyzeSecurity(ratios.hackThreads) / weakenSecurityAmount + 1;
   ratios.weakenGrowthThreads = ns.growthAnalyzeSecurity(Math.ceil(ratios.growthThreads)) / weakenSecurityAmount;
@@ -42,8 +55,28 @@ export function getRatios(ns: NS, target: string | Server, hackThreads = 1): Thr
 export async function maximizeRatios(ns: NS, target: Server, host: Server, printInfo = false): Promise<ThreadRatios> {
   if (printInfo) ns.tprintf("Maximizing for %s from %s", target.hostname, host.hostname);
   const threadLimit = (host.maxRam / 1.75) - 1;
+  return maximize(ns, target, threadLimit, printInfo);
+}
 
-  let mark = getRatios(ns, target, Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable * .5)));
+export function printRatios(ns: NS, ratios: ThreadRatios): void {
+  ns.tprintf(getRatiosSummary(ns, ratios));
+}
+
+export function getRatiosSummary(ns: NS, ratios: ThreadRatios):string {
+  const strings: string[] = []
+  strings.push(ns.sprintf("Hack Threads: %d (%s)", ratios.hackThreads, ns.nFormat(ratios.hackThreads, "0.00")));
+  strings.push(ns.sprintf("Growth Threads: %d (%s)", Math.ceil(ratios.growthThreads), ns.nFormat(ratios.growthThreads, "0.00")));
+  strings.push(ns.sprintf("Weaken(hack) Threads: %d (%s)", Math.ceil(ratios.weakenHackThreads), ns.nFormat(ratios.weakenHackThreads, "0.00")));
+  strings.push(ns.sprintf("Weaken(grow) Threads: %d (%s)", Math.ceil(ratios.weakenGrowthThreads), ns.nFormat(ratios.weakenGrowthThreads, "0.00")));
+  strings.push(ns.sprintf("%d total threads", ratios.totalThreads))
+  return strings.join("\n");
+}
+
+
+export async function maximize(ns: NS, target: Server, threadLimit: number, printInfo = false): Promise<ThreadRatios>
+{
+
+  let mark = getRatios(ns, target, Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable * .9)));
   const initialMultiplier = Math.ceil(mark.hackThreads);
   if (printInfo) printRatios(ns, mark);
   if (printInfo) ns.tprintf("Thread Limit: %d\nInitial Multiplier: %d", threadLimit, initialMultiplier);
@@ -71,26 +104,4 @@ export async function maximizeRatios(ns: NS, target: Server, host: Server, print
     await ns.sleep(100);
   }
   return getRatios(ns, target, bottomMultiplier);
-}
-
-export function printRatios(ns: NS, ratios: ThreadRatios): void {
-  ns.tprintf("Hack Threads: %d (%f)", ratios.hackThreads, ratios.hackThreads);
-  ns.tprintf("Growth Threads: %d (%f)", Math.ceil(ratios.growthThreads), ratios.growthThreads);
-  ns.tprintf("Weaken(hack) Threads: %d (%f)", Math.ceil(ratios.weakenHackThreads), ratios.weakenHackThreads);
-  ns.tprintf("Weaken(grow) Threads: %d (%f)", Math.ceil(ratios.weakenGrowthThreads), ratios.weakenGrowthThreads);
-  // ns.tprint("Hack Time: ", ratios.hackTime);
-  // ns.tprint("Grow Time: ", ratios.growTime);
-  // ns.tprint("Weaken Time: ", ratios.weakenTime);
-
-  ns.tprintf("%d total threads", ratios.totalThreads)
-}
-
-
-
-export function newMaximize(ns: NS, target: string | Server, threadLimit: number, printInfo = true)
-{
-  const targetServer = (typeof target == "object") ? target as Server : ns.getServer(target);
-  const oneHack = getRatios(ns, targetServer, 1);
-  if (printInfo) printRatios(ns, oneHack);
-  ns.tprint(oneHack.totalThreads)
 }

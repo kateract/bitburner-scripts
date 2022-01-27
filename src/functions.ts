@@ -2,6 +2,7 @@
 import { NS, Server } from '@ns';
 import { ThreadRatios } from '/ThreadRatios';
 
+export const GB_MULT = 1073741824;
 
 export function isHackable(ns: NS, serverInfo: Server): boolean {
   return serverInfo.moneyMax > 0 && serverInfo.requiredHackingSkill <= ns.getHackingLevel() && serverInfo.hasAdminRights
@@ -77,37 +78,6 @@ export async function populateServer(ns: NS, server: string | Server): Promise<b
   return true;
 }
 
-
-
-/** @param {NS} ns **/
-export function macaroni(ns: NS, serverInfo: Server, target: string, hackRatio: number, weakenRatio: number, growRatio: number): void {
-  const memory = serverInfo.maxRam * .98;
-  const total = hackRatio + weakenRatio + growRatio;
-  const instances = (memory / 1.75)
-  //ns.tprintf("memory %d; instances %d; calc mem %d", memory, instances, instances * 1.75);
-  const threads = [0, 0, 0]
-  for (let i = 0; i < instances; i++) {
-    const select = (Math.random() * total) - hackRatio
-    if (select < 0) {
-      threads[0] += 1;
-    } else if (select > weakenRatio) {
-      threads[2] += 1;
-    }
-    else {
-      threads[1] += 1;
-    }
-  }
-  if (threads[0] > 0) {
-    ns.exec("hackForever.js", serverInfo.hostname, threads[0], target)
-  }
-  if (threads[1] > 0) {
-    ns.exec("weakenForever.js", serverInfo.hostname, threads[1], target)
-  }
-  if (threads[2] > 0) {
-    ns.exec("growForever.js", serverInfo.hostname, threads[2], target)
-  }
-
-}
 
 export function deployDispatcher(ns: NS, dispatchHost: string, hackHost: string, target: string, ratios: ThreadRatios): void {
   ns.exec("dispatcher.js", dispatchHost, 1,

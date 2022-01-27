@@ -1,6 +1,6 @@
 import { NS, ProcessInfo } from '@ns'
 
-import { killProcesses, populateServer, compare } from '/functions';
+import { killProcesses, populateServer, compare, GB_MULT } from '/functions';
 
 /** @param {NS} ns **/
 export async function main(ns: NS): Promise<void> {
@@ -25,8 +25,8 @@ export async function main(ns: NS): Promise<void> {
 		//ns.tprint(level)
 		const cost = ns.getPurchasedServerCost(levels[level]);
 		if ((ns.getServerMoneyAvailable("home") * .75 / 25) > cost && level < 19) {
-			ns.tprintf("Server cost for %s too low (%s), trying %s in 10 seconds", ns.nFormat(levels[level]*1e+9, "0.000 b"), ns.nFormat(cost, "$ 0.00 a"), ns.nFormat(levels[level + 1]*1e+9, "0.000 ib"));
-			await ns.sleep(10000);
+			ns.tprintf("Server cost for %s too low (%s), trying %s in 5 seconds", ns.nFormat(levels[level]*GB_MULT, "0.000 ib"), ns.nFormat(cost, "$ 0.00 a"), ns.nFormat(levels[level + 1]*GB_MULT, "0.000 ib"));
+			await ns.sleep(5000);
 			continue;
 		}
 		for (index; index < limit; index++) {
@@ -44,7 +44,7 @@ export async function main(ns: NS): Promise<void> {
 					ns.tprintf("Skipping Server %s this level.", server.hostname)
 					continue;
 				} 
-				ns.tprintf("Upgrading Server %s to %s ram", server.hostname, ns.nFormat(levels[level]*1e+9, "0.000 b"));
+				ns.tprintf("Upgrading Server %s to %s ram", server.hostname, ns.nFormat(levels[level]*GB_MULT, "0.000 ib"));
 				ps = ns.ps(server.hostname);
         killProcesses(ns, server);
 				ns.deleteServer(server.hostname);
