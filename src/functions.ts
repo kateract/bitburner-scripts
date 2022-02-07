@@ -74,7 +74,7 @@ export async function populateServer(ns: NS, server: string | Server): Promise<b
   await ns.scp('ratios.js', "home", host);
   await ns.scp('ThreadRatios.js', "home", host);
   await ns.scp('noodles.js', "home", host);
-
+  await ns.scp('ports.js', "home", host);
   return true;
 }
 

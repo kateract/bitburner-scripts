@@ -4,8 +4,10 @@ import { prepareServer } from '/prepareServer';
 import { ThreadRatios } from '/ThreadRatios';
 import { getRatios, maximizeRatios } from '/ratios'
 import { getServerSummary, logServerSummary } from '/visualize';
+import { Port } from '/ports';
 
 export async function main(ns: NS): Promise<void> {
+  const log = ns.getPortHandle(Port.DISPATCH_LOG);
   const target = ns.args[0].toString();
   const host = ns.args[1].toString();
   let hackThreads = isNaN(ns.args[2] as number) ? 0 : ns.args[2] as number;
@@ -15,7 +17,7 @@ export async function main(ns: NS): Promise<void> {
     const pids: number[] = []
     let waiting = true
     while (waiting) {
-      const procs = ns.ps(host).map(p => p.pid);
+      const procs = getHackProcs(ns, host, target);
       waiting = false;
       pids.forEach(p => waiting = waiting || procs.indexOf(p) >= 0)
       if (waiting) {
@@ -28,14 +30,14 @@ export async function main(ns: NS): Promise<void> {
     if (ratios.hackThreads < hackThreads) {
       hackThreads = ratios.hackThreads;
     }
-    if (targetInfo.moneyMax > targetInfo.moneyAvailable || targetInfo.hackDifficulty > targetInfo.minDifficulty) {
+    if (targetInfo.moneyMax * .95 > targetInfo.moneyAvailable || targetInfo.hackDifficulty > targetInfo.minDifficulty * 1.2) {
       if (messages.length > 0) {
         for (let i = 0; i < messages.length; i++)
         {
-          ns.tprintf(messages.shift() as string)
+          log.write(messages.shift() as string);
         }
       } 
-      ns.tprintf("Shortfall detected on %s, re-preparing...", targetInfo.hostname)
+      log.write(ns.sprintf("Shortfall detected on %s, re-preparing...", targetInfo.hostname));
       //printServerSummary(ns, targetInfo)
       if (hostInfo.hostname == "home"){
         await prepareServer(ns, hostInfo, targetInfo, (hostInfo.maxRam - hostInfo.ramUsed)/2 < 5000 ? (hostInfo.maxRam - hostInfo.ramUsed)/2 : 5000, false);
@@ -59,15 +61,15 @@ export async function main(ns: NS): Promise<void> {
         { item: 4, time: ratios.weakenTime + 1000 }];
 
       const order = timing.sort((a, b) => compare(a.time, b.time, true));
+      
       ns.print(order);
-
-      runProc(order[0].item, ratios);
+      let cont = runProc(order[0].item, ratios) > 0;
       await ns.sleep(order[0].time - order[1].time)
-      runProc(order[1].item, ratios);
+      if (cont) cont = runProc(order[1].item, ratios) > 0;
       await ns.sleep(order[1].time - order[2].time);
-      runProc(order[2].item, ratios);
+      if (cont) cont = runProc(order[2].item, ratios) > 0; 
       await ns.sleep(order[2].time - order[3].time);
-      runProc(order[3].item, ratios);
+      if (cont) cont = runProc(order[3].item, ratios) > 0;
       await ns.sleep(ratios.hackTime+ 500);
       targetInfo = ns.getServer(targetInfo.hostname);
       messages.push(ns.sprintf("Actual Hack Amount: %s (expected %s)", ns.nFormat((targetInfo.moneyMax - targetInfo.moneyAvailable) / targetInfo.moneyMax, "0.00000"), ns.nFormat(ns.hackAnalyze(targetInfo.hostname)* ratios.hackThreads, "0.00000")));
@@ -95,9 +97,13 @@ export async function main(ns: NS): Promise<void> {
         messages.push(ns.sprintf("Target %s Grow weaken ineffective:", targetInfo.hostname));
         messages.push(getServerSummary(ns, targetInfo));
       }
+      if(!cont && hackThreads > 1) {
+        log.write(`Memory Constraint Reached on ${host} targeting ${target}`)
+        ns.spawn("dispatcher.js", 1, target, host, Math.ceil(hackThreads * .9))
+      }
     }
     else {
-      ns.tprint("hack time mismatch")
+      ns.tprint("hack time mismatch ")
       ns.tprint("Hack Time: ", ratios.hackTime);
       ns.tprint("Grow Time: ", ratios.growTime);
       ns.tprint("Weaken Time: ", ratios.weakenTime);
@@ -106,20 +112,22 @@ export async function main(ns: NS): Promise<void> {
 
   }
 
-  function runProc(index: number, ratios: ThreadRatios) {
+  function runProc(index: number, ratios: ThreadRatios): number {
     switch (index) {
       case 1:
-        ns.exec("hack.js", host, ratios.hackThreads, target);
-        break;
+        return ns.exec("hack.js", host, ratios.hackThreads, target);
       case 2:
-        ns.exec("weaken.js", host, Math.ceil(ratios.weakenHackThreads), target);
-        break;
+        return ns.exec("weaken.js", host, Math.ceil(ratios.weakenHackThreads), target);
       case 3:
-        ns.exec("grow.js", host, Math.ceil(ratios.growthThreads), target);
-        break;
+        return ns.exec("grow.js", host, Math.ceil(ratios.growthThreads), target);
       case 4:
-        ns.exec("weakenTwice.js", host, Math.ceil(ratios.weakenGrowthThreads), target);
-        break;
+        return ns.exec("weakenTwice.js", host, Math.ceil(ratios.weakenGrowthThreads), target);
     }
+  }
+
+  function getHackProcs(ns: NS, host: string, target: string)
+  {
+    const processes = ["hack.js", "weaken.js", "grow.js", "weakenTwice.js"]
+    return ns.ps(host).filter(p => processes.includes(p.filename) && p.args[0] == target).map(p => p.pid);
   }
 }

@@ -1,4 +1,5 @@
 import { NS, Server } from '@ns'
+import { Port } from '/ports';
 import { ThreadRatios } from '/ThreadRatios';
 
 export async function main(ns: NS): Promise<void> {
@@ -31,20 +32,22 @@ export async function main(ns: NS): Promise<void> {
 
 
 export function getRatios(ns: NS, target: Server, hackThreads = 1): ThreadRatios {
+  const log = ns.getPortHandle(Port.DISPATCH_LOG);
   const hostname = target.hostname;
   const ratios = new ThreadRatios();
-  const cores = 6
   ratios.hackThreads = Math.ceil(hackThreads);
   let hackAmount = ns.hackAnalyze(hostname) * ratios.hackThreads;
   if (hackAmount >= .999) {
     ratios.hackThreads = ns.hackAnalyzeThreads(hostname, target.moneyAvailable * .9);
-    ns.tprintf("Hack amount greater than 99.9%%(%s) , reducing to %d threads (from %d)", ns.nFormat(hackAmount, "0.000000"), ratios.hackThreads, hackThreads);
+    log.write(ns.sprintf("Hack amount greater than 99.9%%(%s) , reducing to %d threads (from %d)", ns.nFormat(hackAmount, "0.000000"), ratios.hackThreads, hackThreads));
     hackAmount = ns.hackAnalyze(hostname) * ratios.hackThreads;
   }
-  ratios.growthThreads = ns.growthAnalyze(hostname, Math.min(1 / (1 - hackAmount), 10.5)) + 1;
+  const catchUp = target.moneyMax - target.moneyAvailable > 0 ? (target.moneyMax - target.moneyAvailable)/ target.moneyMax : 0
+  //ns.tprint(catchUp)
+  ratios.growthThreads = ns.growthAnalyze(hostname, (1.1 / (1 - hackAmount)) + catchUp) + 1;
   
   const weakenSecurityAmount = ns.weakenAnalyze(1);
-  ratios.weakenHackThreads = ns.hackAnalyzeSecurity(ratios.hackThreads) / weakenSecurityAmount + 1;
+  ratios.weakenHackThreads = (ns.hackAnalyzeSecurity(ratios.hackThreads) + target.hackDifficulty - target.minDifficulty) / weakenSecurityAmount + 1;
   ratios.weakenGrowthThreads = ns.growthAnalyzeSecurity(Math.ceil(ratios.growthThreads)) / weakenSecurityAmount;
   ratios.hackTime = ns.getHackTime(hostname);
   ratios.growTime = ns.getGrowTime(hostname);
@@ -61,7 +64,17 @@ export async function maximizeRatios(ns: NS, target: Server, host: Server, print
 export function printRatios(ns: NS, ratios: ThreadRatios): void {
   ns.tprintf(getRatiosSummary(ns, ratios));
 }
-
+export function logRatios(ns: NS, ratios: ThreadRatios, port: Port = 0): void {
+  const sum = getRatiosSummary(ns, ratios);
+  if (port > 0) {
+    const log = ns.getPortHandle(port);
+    log.write(sum);
+  }
+  else 
+  {
+    ns.print(sum);
+  }
+}
 export function getRatiosSummary(ns: NS, ratios: ThreadRatios):string {
   const strings: string[] = []
   strings.push(ns.sprintf("Hack Threads: %d (%s)", ratios.hackThreads, ns.nFormat(ratios.hackThreads, "0.00")));
@@ -75,8 +88,8 @@ export function getRatiosSummary(ns: NS, ratios: ThreadRatios):string {
 
 export async function maximize(ns: NS, target: Server, threadLimit: number, printInfo = false): Promise<ThreadRatios>
 {
-
-  let mark = getRatios(ns, target, Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable * .9)));
+  const pointNine = Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable * .9))
+  let mark = getRatios(ns, target, pointNine > threadLimit ? threadLimit : pointNine);
   const initialMultiplier = Math.ceil(mark.hackThreads);
   if (printInfo) printRatios(ns, mark);
   if (printInfo) ns.tprintf("Thread Limit: %d\nInitial Multiplier: %d", threadLimit, initialMultiplier);

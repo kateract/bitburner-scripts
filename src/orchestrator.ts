@@ -2,6 +2,7 @@ import { NS, ProcessInfo, Server } from '@ns'
 import { deployDispatcher, isHackable, killProcesses, populateServer, compare } from '/functions'
 import { explore } from '/explore'
 import { maximizeRatios } from '/ratios'
+import { Port } from '/ports';
 
 
 
@@ -11,6 +12,10 @@ interface ProcessInfoExt extends ProcessInfo {
 }
 
 export async function main(ns: NS): Promise<void> {
+  ns.disableLog("ALL");
+  ns.tail();
+  ns.clearLog();
+  const log = ns.getPortHandle(Port.DISPATCH_LOG);
   const scriptCost = 1.8;
   const servers = await explore(ns, "home");
   const purchasedServers = servers.filter(s => s.maxRam > scriptCost && s.purchasedByPlayer).sort((a, b) => compare(a.maxRam, b.maxRam, true));
@@ -21,20 +26,20 @@ export async function main(ns: NS): Promise<void> {
 
 
   const exists = getExistingProcesses(ns, purchasedServers, targetServers);
-  console.log(exists);
+  //console.log(exists);
   for (let i = 0; i < purchasedServers.length; i++) {
-    ns.tprintf("Server: %s  Threads: %d  Target: %s", purchasedServers[i].hostname, threadLimits[i], targetServers[i]?.hostname);
+    ns.print(ns.sprintf("Server: %s  Threads: %d  Target: %s", purchasedServers[i].hostname, threadLimits[i], targetServers[i]?.hostname));
     await populateServer(ns, purchasedServers[i]);
     totalThreads += threadLimits[i];
   }
-  ns.tprintf("Total Threads available: %d", totalThreads)
+  ns.print(ns.sprintf("Total Threads available: %d", totalThreads));
 
   const preparePIDs: number[] = []
   // //find existing prepare PIDs
   // const existingPrepares = ns.ps("home").filter(p => p.filename ==="prepareServer.js")
 
   prepareServers(ns, purchasedServers, targetServers, threadLimits, exists, preparePIDs);
-  //wait for a prepare thread to exit
+
   const primaryServers = Math.min(purchasedServers.length, targetServers.length);
   if (primaryServers < targetServers.length){ 
     const memReq = Math.max(ns.getScriptRam("prepareServer.js"), ns.getScriptRam("dispatcher.js")) * primaryServers + ns.getScriptRam("orchestrator.js") + ns.getScriptRam("watcher.js");
@@ -45,10 +50,11 @@ export async function main(ns: NS): Promise<void> {
       if (!exists.find(p => p.target.hostname == targetServers[i].hostname)){
         ns.exec("homeDispatch.js", "home", 1, targetServers[i].hostname);
       }
-      await ns.sleep(200);
+      await ns.sleep(250);
     }
   }
-
+  
+  //wait for a prepare thread to exit
   while (preparePIDs.filter(p => p > 0).length > 0) {
     const procs = ns.ps().filter(p => p.filename === "prepareServer.js");
     for (let i = 0; i < preparePIDs.length; i++) {
@@ -67,6 +73,7 @@ export async function main(ns: NS): Promise<void> {
         const ratio = await maximizeRatios(ns, targetServers[i], purchasedServers[i], false)
         if (ratio) {
           deployDispatcher(ns, "home", purchasedServers[i].hostname, targetServers[i].hostname, ratio);
+          log.write(ns.sprintf("Dispatcher Deployed against %s", targetServers[i].hostname));
           preparePIDs[i] = 0;
           await ns.sleep(100);
         }

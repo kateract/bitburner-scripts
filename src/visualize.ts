@@ -29,5 +29,5 @@ export function printServerSummary(ns: NS, serverInfo: Server): void {
 }
 
 export function getServerSummary(ns: NS, serverInfo: Server): string{
-  return ns.sprintf("%20s: Money - %10s(%10s)  |  Security - %8s(%8s)", serverInfo.hostname, ns.nFormat(serverInfo.moneyAvailable, "$0.000 a"), ns.nFormat(serverInfo.moneyMax, "$0.000 a"), ns.nFormat(serverInfo.hackDifficulty, "0.000"), ns.nFormat(serverInfo.minDifficulty, "0.000"))
-}
+  return ns.sprintf("%s: Money - %10s(%10s)  |  Security - %8s(%8s)", serverInfo.hostname, ns.nFormat(serverInfo.moneyAvailable, "$0.000 a"), ns.nFormat(serverInfo.moneyMax, "$0.000 a"), ns.nFormat(serverInfo.hackDifficulty, "0.000"), ns.nFormat(serverInfo.minDifficulty, "0.000"))
+} 

@@ -1,7 +1,7 @@
-import { NS } from '@ns'
+import { NS, Server } from '@ns'
 import { explore } from '/explore'
 import { getRatiosSummary, maximize } from '/ratios';
-import { logServerSummary } from '/visualize';
+import { getServerInfo } from '/visualize';
 import { compare } from '/functions';
 
 export async function main(ns: NS): Promise<void> {
@@ -17,18 +17,20 @@ export async function main(ns: NS): Promise<void> {
     const servers = await explore(ns, "home");
     //find best target
     const level = ns.getHackingLevel();
-    const hackTargets = servers.filter(s => s.hasAdminRights && s.moneyMax > 0 && s.requiredHackingSkill < level)
+    const hackTargets = servers.filter(s => s.hasAdminRights && s.moneyMax > 0 && s.requiredHackingSkill <= level)
     //ns.print(hackTargets)
-    const moneyPerSecond = hackTargets.map(s => s.moneyMax / ns.getWeakenTime(s.hostname) * 1000)
-    const target = hackTargets[moneyPerSecond.indexOf(Math.max(...moneyPerSecond))];
-    //const target = ns.getServer("n00dles");
+    hackTargets.sort((a, b) => compare(getMoneyPerSecond(ns, a), getMoneyPerSecond(ns, b), true));
+    let target = hackTargets[0];
+    if (ns.args.length > 0) {
+      target = ns.getServer(ns.args[0] as string);
+      ns.print(`Targeting ${target.hostname} by argument`)
+    }
     // for (let i = 0; i < hackTargets.length; i++) {
     //   ns.print(`${hackTargets[i].hostname}: ${ns.nFormat(moneyPerSecond[i], "$0.00a")}/s`);
     // }
-    ns.print(`Target: ${target.hostname}`);
-    logServerSummary(ns, target);
+    ns.print(getServerInfo(ns, target));
     //find total ram
-    const scriptHosts = servers.filter(s => s.hasAdminRights && s.maxRam > 0 && s.hostname != "home");
+    const scriptHosts = servers.filter(s => s.hasAdminRights && s.maxRam > 0 && s.hostname != "home" && s.hostname != "darkweb");
     const serverThreads = scriptHosts.map(s => Math.floor(s.maxRam / 1.76));
 
     // for (let i = 0; i < scriptHosts.length; i++) {
@@ -76,11 +78,11 @@ export async function main(ns: NS): Promise<void> {
 
     const order = timing.sort((a, b) => compare(a.time, b.time, true));
     let curServerIndex = 0;
-    let threadsRemain = ratios.totalThreads;
+    let threadsRemain = totalThreads;
     let curServerThreadsRemain = serverThreads[curServerIndex];
     let curProcess = 0;
     let curProcessThreadsRemain = order[0].threads;
-    while (threadsRemain > 0) {
+    while (threadsRemain > 0 && curProcess < order.length) {
       if (curServerThreadsRemain < curProcessThreadsRemain) {
         //ns.print(`P1 Running ${curServerThreadsRemain} instances of ${order[curProcess].process} on ${scriptHosts[curServerIndex].hostname}`);
         ns.exec(order[curProcess].process, scriptHosts[curServerIndex].hostname, curServerThreadsRemain, target.hostname);
@@ -120,4 +122,8 @@ export async function main(ns: NS): Promise<void> {
     }
     await ns.sleep(order[order.length - 1].time);
   }
+}
+
+function getMoneyPerSecond(ns: NS, server: Server) {
+  return server.moneyMax / ns.getWeakenTime(server.hostname) * 1000
 }

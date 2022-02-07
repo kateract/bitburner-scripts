@@ -1,5 +1,5 @@
 import { NS, Server } from '@ns'
-import { compare, isHackable, isRootable, rootServer, populateServer, killProcesses } from "/functions.js"
+import { compare, isHackable, isRootable, rootServer, populateServer } from "/functions.js"
 import { printServerInfo } from "/visualize"
 
 
@@ -30,7 +30,7 @@ export async function main(ns: NS): Promise<void> {
 		}
 		else {
 			if (s.hasAdminRights) await populateServer(ns, s);
-			await ns.sleep(200);
+			//await ns.sleep(200);
 		}
 	}
 }

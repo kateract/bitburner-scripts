@@ -10,6 +10,7 @@ export async function main(ns: NS): Promise<void> {
   let printInfo = false;
   if (ns.args.length > 3) printInfo = true;
   await prepareServer(ns, ns.getServer( host), target, threadLimit, printInfo);
+  ns.print(ns.sprintf("Server %s prepared", target.hostname));
 }
 
 
@@ -20,7 +21,6 @@ export async function prepareServer(ns: NS, host: Server, target: Server, thread
   target = await weakenToMinimum(ns, host, target, threadLimit, printInfo);
   //phase two, maximize cash while maintaining minimum
   target = await growToMaximum(ns, host, target, threadLimit, printInfo);
-  ns.tprintf("Server %s prepared", target.hostname);
 }
 
 export async function growToMaximum(ns: NS, host: Server, targetServer: Server, threadLimit: number, printInfo = false): Promise<Server> {
