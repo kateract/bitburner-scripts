@@ -65,7 +65,7 @@ export async function main(ns: NS): Promise<void> {
 				let proc = ns.ps().find(p => p.filename == "dispatcher.js" && p.args[0] == host)
 				if (proc) {
 					ns.kill(proc.pid)
-					const newRatios = await maximize(ns, proc.args[0], (Math.floor(servers[index].maxRam/1.75)));
+					const newRatios = await maximize(ns, servers[index], (Math.floor(servers[index].maxRam/1.75)));
 					ns.exec("dispatcher.js", "home", 1, proc.args[0], proc.args[1], newRatios.hackThreads);
 				}
 				proc = ns.ps().find(p => p.filename === "prepareServer.js" && p.args[1] == host)

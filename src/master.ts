@@ -1,4 +1,4 @@
-import { NS } from '@ns'
+import { NS, Server } from '@ns'
 import { explore } from '/explore'
 import { OrchestratedServer, Process } from '/orchestratedServer';
 

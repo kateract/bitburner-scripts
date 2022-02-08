@@ -99,7 +99,7 @@ export async function main(ns: NS): Promise<void> {
       }
       if(!cont && hackThreads > 1) {
         log.write(`Memory Constraint Reached on ${host} targeting ${target}`)
-        ns.spawn("dispatcher.js", 1, target, host, Math.ceil(hackThreads * .9))
+        ns.spawn("dispatcher.js", 1, target, host, Math.ceil(hackThreads * .9).toString())
       }
     }
     else {
@@ -122,6 +122,8 @@ export async function main(ns: NS): Promise<void> {
         return ns.exec("grow.js", host, Math.ceil(ratios.growthThreads), target);
       case 4:
         return ns.exec("weakenTwice.js", host, Math.ceil(ratios.weakenGrowthThreads), target);
+      default:
+        return 0;
     }
   }
 
