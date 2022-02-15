@@ -1,6 +1,8 @@
 export class ThreadRatios {
   public hackThreads = 0;
+  public hackAmount = 0;
   public growthThreads = 0;
+  public growAmount = 0;
   public weakenHackThreads = 0;
   public weakenGrowthThreads = 0;
   public hackTime = 0;

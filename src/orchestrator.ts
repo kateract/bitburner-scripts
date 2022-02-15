@@ -1,5 +1,5 @@
 import { NS, ProcessInfo, Server } from '@ns'
-import { deployDispatcher, isHackable, killProcesses, populateServer, compare } from '/functions'
+import { deployDispatcher2, isHackable, killProcesses, populateServer, compare } from '/functions'
 import { explore } from '/explore'
 import { maximizeRatios } from '/ratios'
 import { Port } from '/ports';
@@ -22,7 +22,7 @@ export async function main(ns: NS): Promise<void> {
   const threadLimits = purchasedServers.map(s => Math.floor(s.maxRam / scriptCost));
   let totalThreads = 0;
   const targetServers = servers.filter(s => isHackable(ns, s));
-  targetServers.sort((a, b) => compare(a.moneyMax, b.moneyMax, true))
+  targetServers.sort((a, b) => compare(getMoneyPerSecond(ns, a), getMoneyPerSecond(ns, b), true))
 
 
   const exists = getExistingProcesses(ns, purchasedServers, targetServers);
@@ -72,7 +72,8 @@ export async function main(ns: NS): Promise<void> {
         targetServers[i] = ns.getServer(targetServers[i].hostname)
         const ratio = await maximizeRatios(ns, targetServers[i], purchasedServers[i], false)
         if (ratio) {
-          deployDispatcher(ns, "home", purchasedServers[i].hostname, targetServers[i].hostname, ratio);
+          //deployDispatcher(ns, "home", purchasedServers[i].hostname, targetServers[i].hostname, ratio);
+          deployDispatcher2(ns, "home", purchasedServers[i].hostname, targetServers[i].hostname);
           log.write(ns.sprintf("Dispatcher Deployed against %s", targetServers[i].hostname));
           preparePIDs[i] = 0;
           await ns.sleep(100);
@@ -131,4 +132,12 @@ function prepareServers(ns: NS, purchasedServers: Server[], targetServers: Serve
       preparePIDs.push(pid ? pid : 0);
     }
   }
+}
+
+function getMoneyPerSecond(ns: NS, server: Server) {
+  const player = ns.getPlayer()
+  const tserver = ns.getServer(server.hostname);
+  tserver.moneyAvailable = tserver.moneyMax
+  tserver.hackDifficulty = tserver.minDifficulty
+  return tserver.moneyMax / ns.formulas.hacking.weakenTime(tserver, player) * 1000 * ns.formulas.hacking.hackChance(tserver, player);
 }

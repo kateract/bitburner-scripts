@@ -1,6 +1,7 @@
 /* eslint-disable no-fallthrough */
 import { NS, Server } from '@ns';
 import { ThreadRatios } from '/ThreadRatios';
+import { ProcessTiming } from '/ProcessTiming';
 
 export const GB_MULT = 1073741824;
 
@@ -86,8 +87,39 @@ export function deployDispatcher(ns: NS, dispatchHost: string, hackHost: string,
     Math.ceil(ratios.hackThreads));
 }
 
+export function deployDispatcher2(ns: NS, dispatchHost: string, hackHost: string, target: string): void {
+  ns.exec("dispatcher2.js", dispatchHost, 1,
+    target,
+    hackHost);
+}
+
+
 
 
 export function compare(a: number | string, b: number | string, descending = false): number {
   return b === a ? 0 : ((descending ? b > a : a > b) ? 1 : -1);
+}
+
+export function batchHWGW (ns: NS, ratios: ThreadRatios, threadLimit: number, batch: ProcessTiming[] = [], spacing = 1000) : ProcessTiming[] {
+  let offset = batch.reduce((p, c) => p < (c.offset - spacing) ? p : c.offset - spacing, 0);
+  batch.forEach(b => b.offset -= offset);
+  offset = 0;
+  let threadCount = batch.filter(b => b.time > offset).map(b => b.threads).reduce((p, c) => p + c, 0)
+  let cycleCount = 0;
+  let complete = false;
+  while (threadCount + ratios.totalThreads <= threadLimit && !complete) {
+    if (batch.filter(b => b.time >= offset - spacing/2 && b.time <= (offset + 4.5 * spacing)).length == 0) {
+      batch.push(new ProcessTiming("weaken.js", ratios.weakenTime, Math.ceil(ratios.weakenGrowthThreads), offset));
+      batch.push(new ProcessTiming("grow.js", ratios.growTime, Math.ceil(ratios.growthThreads), offset + spacing * 1));
+      batch.push(new ProcessTiming("weaken.js", ratios.weakenTime, Math.ceil(ratios.weakenHackThreads), offset + spacing * 2));
+      batch.push(new ProcessTiming("hack.js", ratios.hackTime, Math.ceil(ratios.hackThreads), offset + spacing * 3))
+      cycleCount++;
+    }
+    offset -= spacing * 5;
+    if (batch.length > 0 && batch[0].time + offset < 0) complete = true;
+    console.log(batch.length, offset);
+    threadCount = batch.filter(b => b.time > offset).map(b => b.threads).reduce((p, c) => p + c, 0)
+  } 
+  if (cycleCount > 0) ns.print(`Added ${cycleCount} cycles.`);
+  return batch.sort((a, b) => compare(a.time, b.time, true));
 }

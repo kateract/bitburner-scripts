@@ -15,33 +15,38 @@ export async function main(ns: NS): Promise<void> {
     ns.print(`=== Beginning Cycle ${cycle++} ===`);
     ns.print("");
     const servers = await explore(ns, "home");
+    
+    const scriptHosts = servers.filter(s => s.hasAdminRights && s.maxRam > 0 && s.hostname != "home" && s.hostname != "darkweb").sort((a, b) => compare(a.maxRam, b.maxRam));
+    const serverThreads = scriptHosts.map(s => Math.floor(s.maxRam / 1.76));
+    const totalThreads = serverThreads.reduce((p, c) => p + c);
+    ns.print(`${totalThreads} Threads Total`);
+
+    
     //find best target
     const level = ns.getHackingLevel();
     const hackTargets = servers.filter(s => s.hasAdminRights && s.moneyMax > 0 && s.requiredHackingSkill <= level)
     //ns.print(hackTargets)
     hackTargets.sort((a, b) => compare(getMoneyPerSecond(ns, a), getMoneyPerSecond(ns, b), true));
-    let target = hackTargets[0];
+    let targetIndex = 0;
+    let ratios = await maximize(ns, hackTargets[0], totalThreads)
+    while(
+      hackTargets[targetIndex].moneyAvailable == hackTargets[targetIndex].moneyMax
+      && hackTargets[targetIndex].minDifficulty == hackTargets[targetIndex].hackDifficulty
+      && ratios.totalThreads > totalThreads)
+    {
+      targetIndex++;
+      ratios = await maximize(ns, hackTargets[targetIndex], totalThreads);
+    }
+    let target = hackTargets[targetIndex];
     if (ns.args.length > 0) {
       target = ns.getServer(ns.args[0] as string);
       ns.print(`Targeting ${target.hostname} by argument`)
     }
-    // for (let i = 0; i < hackTargets.length; i++) {
-    //   ns.print(`${hackTargets[i].hostname}: ${ns.nFormat(moneyPerSecond[i], "$0.00a")}/s`);
-    // }
+
     ns.print(getServerInfo(ns, target));
-    //find total ram
-    const scriptHosts = servers.filter(s => s.hasAdminRights && s.maxRam > 0 && s.hostname != "home" && s.hostname != "darkweb");
-    const serverThreads = scriptHosts.map(s => Math.floor(s.maxRam / 1.76));
-
-    // for (let i = 0; i < scriptHosts.length; i++) {
-    //   ns.print(`${scriptHosts[i].hostname}: ${serverThreads[i]} Threads`);
-    // }
-    //calculate total threads
-    const totalThreads = serverThreads.reduce((p, c) => p + c);
-    ns.print(`${totalThreads} Threads Total`);
-
+    
     //calculate ratios
-    const ratios = await maximize(ns, target, totalThreads)
+    
     
     //distribute threads across servers
     const hwgwTiming = [
@@ -125,5 +130,5 @@ export async function main(ns: NS): Promise<void> {
 }
 
 function getMoneyPerSecond(ns: NS, server: Server) {
-  return server.moneyMax / ns.getWeakenTime(server.hostname) * 1000
+  return server.moneyMax / ns.getWeakenTime(server.hostname) * 1000;
 }

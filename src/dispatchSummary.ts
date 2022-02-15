@@ -3,7 +3,8 @@ import { compare } from '/functions';
 import {  getServerSummary } from '/visualize'
 
 export async function main(ns : NS) : Promise<void> {
-  const targets = ns.ps().filter(p => p.filename == "dispatcher.js").map(p => p.args[0]);
+  const targets = ns.ps().filter(p => p.filename == "dispatcher.js" || p.filename == "dispatcher2.js").map(p => p.args[0]);
+  if (targets.length == 0) return;
   const infos = targets.map(t => ns.getServer( t));
   infos.sort((a, b) => compare(a.moneyMax, b.moneyMax))
   const sum = infos.map(i => getServerSummary(ns, i))

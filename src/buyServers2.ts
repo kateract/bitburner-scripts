@@ -17,7 +17,7 @@ export async function main(ns: NS): Promise<void> {
 	for (let i = 0; i < servers.length; i++ ) {
 		ns.print(ns.sprintf("%s - Level %d (%s)", servers[i].hostname, memory[i] + 1 , levels[memory[i]] ))
 	}
-	let level = 9
+	let level = 5
 	let index = 0
 	if (servers.length < limit) {
 		index = servers.length;
@@ -40,7 +40,7 @@ export async function main(ns: NS): Promise<void> {
 			let ps: ProcessInfo[] = []
 			//wait until you have enough money
 			while (cost > ns.getServerMoneyAvailable("home")/2) {
-				await ns.sleep(2 * 60 * 1000);
+				await ns.sleep(30 * 1000);
 			}
 
 			if (server) {
@@ -50,8 +50,12 @@ export async function main(ns: NS): Promise<void> {
 				} 
 				ns.print(ns.sprintf("Upgrading Server %s to %s ram", server.hostname, ns.nFormat(levels[level]*GB_MULT, "0.000 ib")));
 				ps = ns.ps(server.hostname);
-        killProcesses(ns, server);
-				ns.deleteServer(server.hostname);
+				let dead = false;
+				while(!dead) {
+					killProcesses(ns, server);
+					dead = ns.deleteServer(server.hostname);
+					if(!dead) await ns.sleep(100);
+				}
 			}
 			else {
 				ns.print(ns.sprintf("Buying Server %s", host));
@@ -67,6 +71,11 @@ export async function main(ns: NS): Promise<void> {
 					ns.kill(proc.pid)
 					const newRatios = await maximize(ns, servers[index], (Math.floor(servers[index].maxRam/1.75)));
 					ns.exec("dispatcher.js", "home", 1, proc.args[0], proc.args[1], newRatios.hackThreads);
+				}
+				proc = ns.ps().find(p => p.filename == "dispatcher2.js" && p.args[0] == host)
+				if (proc) {
+					ns.kill(proc.pid)
+					ns.exec("dispatcher2.js", "home", 1, proc.args[0], proc.args[1]);
 				}
 				proc = ns.ps().find(p => p.filename === "prepareServer.js" && p.args[1] == host)
 				if (proc) {
