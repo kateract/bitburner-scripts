@@ -7,6 +7,8 @@ import { maximize } from '/ratios';
 export async function main(ns: NS): Promise<void> {
 	ns.disableLog("ALL")
 	ns.tail()
+	let level = 5
+
 
 	const limit = ns.getPurchasedServerLimit();
 	const serverNames = ns.getPurchasedServers()
@@ -14,21 +16,31 @@ export async function main(ns: NS): Promise<void> {
 	servers.sort((a, b) => compare(a.hostname, b.hostname));
 	const levels = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576]
 	const memory = servers.map(s => levels.indexOf(ns.getServerMaxRam(s.hostname)));
+	if(ns.args.length > 0){
+		level = (ns.args[0] as number) - 1;
+	} else {
+		while ((ns.getServerMoneyAvailable("home") * .75 / 25) > ns.getPurchasedServerCost(levels[level]))
+		{
+			level++;
+		}
+		if (level > 0) level--;
+	}
 	for (let i = 0; i < servers.length; i++ ) {
 		ns.print(ns.sprintf("%s - Level %d (%s)", servers[i].hostname, memory[i] + 1 , levels[memory[i]] ))
 	}
-	let level = 5
 	let index = 0
 	if (servers.length < limit) {
 		index = servers.length;
 	} else {
 		level = Math.min(...memory) + 1;
+		
 	} 
 	for (level; level < levels.length; level++) {
-		ns.print(ns.sprintf("starting level %-d of %-d", level + 1, levels.length))
 		//ns.tprint(level)
-		const cost = ns.getPurchasedServerCost(levels[level]);
-		if ((ns.getServerMoneyAvailable("home") * .75 / 25) > cost && level < 19) {
+
+		const cost = ns.getPurchasedServerCost(levels[level])
+		ns.print(ns.sprintf("starting level %-d of %-d", level + 1, levels.length))
+		if ((ns.getServerMoneyAvailable("home") * .75 / 25) > ns.getPurchasedServerCost(levels[level + 1]) && level < 19) {
 			ns.print(ns.sprintf("Server cost for %s too low (%s), trying %s in 5 seconds", ns.nFormat(levels[level]*GB_MULT, "0.000 ib"), ns.nFormat(cost, "$ 0.00 a"), ns.nFormat(levels[level + 1]*GB_MULT, "0.000 ib")));
 			await ns.sleep(5000);
 			continue;

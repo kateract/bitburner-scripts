@@ -4,5 +4,6 @@ import { Port } from '/ports';
 export async function main(ns : NS) : Promise<void> {
 	const log = ns.getPortHandle(Port.HACK_LOG)
 	const money = await ns.hack(ns.args[0].toString());
-	log.write(ns.sprintf('Hack gained %9s from %s', ns.nFormat(money, "$##0.000a"), ns.args[0]));
+	log.write(ns.sprintf('Hack gained %9s(%5s) from %s', ns.nFormat(money, "$##0.000a"), ns.nFormat(money/ns.getServerMaxMoney(ns.args[0].toString()), "##.#%"),  ns.args[0]));
+	//console.log(ns.getHostname(),ns.sprintf('Hack gained %9s(%5s) from %s', ns.nFormat(money, "$##0.000a"), ns.nFormat(money/ns.getServerMaxMoney(ns.args[0].toString()), "##.#%"),  ns.args[0]))
 } 

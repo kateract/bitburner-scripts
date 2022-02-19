@@ -2,7 +2,8 @@ import { NS, Server } from '@ns'
 import { explore } from '/explore'
 import { getRatiosSummary, maximize } from '/ratios';
 import { getServerInfo } from '/visualize';
-import { compare } from '/functions';
+import { batchHWGW, compare } from '/functions';
+import { ProcessTiming } from '/ProcessTiming';
 
 export async function main(ns: NS): Promise<void> {
   //scan for all available servers
@@ -17,7 +18,7 @@ export async function main(ns: NS): Promise<void> {
     const servers = await explore(ns, "home");
     
     const scriptHosts = servers.filter(s => s.hasAdminRights && s.maxRam > 0 && s.hostname != "home" && s.hostname != "darkweb").sort((a, b) => compare(a.maxRam, b.maxRam));
-    const serverThreads = scriptHosts.map(s => Math.floor(s.maxRam / 1.76));
+    const serverThreads = scriptHosts.map(s => Math.floor(s.maxRam / 1.8));
     const totalThreads = serverThreads.reduce((p, c) => p + c);
     ns.print(`${totalThreads} Threads Total`);
 
@@ -49,21 +50,16 @@ export async function main(ns: NS): Promise<void> {
     
     
     //distribute threads across servers
-    const hwgwTiming = [
-      { process: "hack.js", time: ratios.hackTime + 4000, threads: Math.ceil(ratios.hackThreads) },
-      { process: "weaken.js", time: ratios.weakenTime + 3000, threads: Math.ceil(ratios.weakenHackThreads) },
-      { process: "grow.js", time: ratios.growTime + 2000, threads: Math.ceil(ratios.growthThreads) },
-      { process: "weakenTwice.js", time: ratios.weakenTime + 1000, threads: Math.ceil(ratios.weakenGrowthThreads) }];
-    
+
     const weakenTiming = [
-      {process: "weaken.js", time: ratios.weakenTime + 1000, threads: totalThreads }
+      new ProcessTiming ("weaken.js", ratios.weakenTime + 1000, totalThreads )
     ];
     const sw = ns.weakenAnalyze(1);
     const sg = ns.growthAnalyzeSecurity(1);
     const wThreads = Math.ceil(((totalThreads - 1)) / ((sw / sg) + 1))
     const growTiming = [
-      {process: "grow.js", time: ratios.growTime + 2000, threads: totalThreads - wThreads },
-      {process: "weaken.js", time: ratios.weakenTime + 1000, threads: wThreads}
+      new ProcessTiming( "grow.js", ratios.growTime + 2000, totalThreads - wThreads),
+      new ProcessTiming("weaken.js", ratios.weakenTime + 1000, wThreads)
     ]
     let timing = [];
     if (target.hackDifficulty > target.minDifficulty){
@@ -75,9 +71,10 @@ export async function main(ns: NS): Promise<void> {
       ns.print(`Growing ${target.hostname} with ${totalThreads - wThreads} grow threads and ${wThreads} weaken threads`)
     }
     else {
-      timing = hwgwTiming;
+      timing = batchHWGW(ns, ratios, totalThreads);
       ns.print(`Executing HWGW on ${target.hostname}`)
       ns.print(getRatiosSummary(ns, ratios));
+      ns.print(`${timing.reduce((p, c) => p + c.threads, 0)} threads in ${timing.length} batches.`)
     }
 
 
@@ -90,7 +87,7 @@ export async function main(ns: NS): Promise<void> {
     while (threadsRemain > 0 && curProcess < order.length) {
       if (curServerThreadsRemain < curProcessThreadsRemain) {
         //ns.print(`P1 Running ${curServerThreadsRemain} instances of ${order[curProcess].process} on ${scriptHosts[curServerIndex].hostname}`);
-        ns.exec(order[curProcess].process, scriptHosts[curServerIndex].hostname, curServerThreadsRemain, target.hostname);
+        ns.exec(order[curProcess].filename, scriptHosts[curServerIndex].hostname, curServerThreadsRemain, target.hostname);
         curProcessThreadsRemain -= curServerThreadsRemain;
         threadsRemain -= curServerThreadsRemain;
         curServerIndex += 1;
@@ -98,7 +95,7 @@ export async function main(ns: NS): Promise<void> {
       }
       else if (curServerThreadsRemain > curProcessThreadsRemain) {
         //ns.print(`P2 Running ${curProcessThreadsRemain} instances of ${order[curProcess].process} on ${scriptHosts[curServerIndex].hostname}`);
-        ns.exec(order[curProcess].process, scriptHosts[curServerIndex].hostname, curProcessThreadsRemain, target.hostname);
+        ns.exec(order[curProcess].filename, scriptHosts[curServerIndex].hostname, curProcessThreadsRemain, target.hostname);
         curServerThreadsRemain -= curProcessThreadsRemain;
         threadsRemain -= curProcessThreadsRemain;
         curProcess += 1;
@@ -108,8 +105,8 @@ export async function main(ns: NS): Promise<void> {
         curProcessThreadsRemain = order[curProcess].threads;
         await ns.sleep(order[curProcess - 1].time - order[curProcess].time)
       } else if (curServerThreadsRemain == curProcessThreadsRemain) {
-        //ns.print(`P3 Running ${curProcessThreadsRemain} instances of ${order[curProcess].process} on ${scriptHosts[curServerIndex].hostname}`);
-        ns.exec(order[curProcess].process, scriptHosts[curServerIndex].hostname, curProcessThreadsRemain, target.hostname);
+        //ns.print(`P3 Running ${curProcessThreadsRemain} instances of ${order[curProcess].filename} on ${scriptHosts[curServerIndex].hostname}`);
+        ns.exec(order[curProcess].filename, scriptHosts[curServerIndex].hostname, curProcessThreadsRemain, target.hostname);
         threadsRemain -= curProcessThreadsRemain
         curProcess += 1;
         if (curProcess == order.length) {

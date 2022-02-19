@@ -14,14 +14,19 @@ export async function main(ns: NS): Promise<void> {
   const messages: string[] = [];
 
   while (true) {
-    const pids: number[] = []
-    let waiting = true
+    const pids: number[] = getHackProcs(ns, host, target)
+    let waiting = pids.length > 0
+    if (waiting) console.log(`start waiting for ${host} targeting ${target}`)
     while (waiting) {
       const procs = getHackProcs(ns, host, target);
+
       waiting = false;
       pids.forEach(p => waiting = waiting || procs.indexOf(p) >= 0)
       if (waiting) {
         await ns.sleep(1000);
+      } 
+      else {
+        console.log(`done waiting for ${host} targeting ${target}`)
       }
     }
     let targetInfo = ns.getServer(target);

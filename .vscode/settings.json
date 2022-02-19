@@ -54,6 +54,7 @@
         "sqlinject",
         "tprint",
         "tprintf",
+        "txts",
         "vsprintf"
     ],
     "bitburner.fileWatcher.enable": true,

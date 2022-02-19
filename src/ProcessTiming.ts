@@ -8,10 +8,14 @@ export class ProcessTiming {
     this._time = time;
   }
   private _time : number;
-  public get time() : number {
+  public get time(): number {
+    return this._time;
+  }
+  public get adjustedTime() : number {
     return this._time + this.offset;
   }
-  public set time(v : number) {
+  public set adjustedTime(v : number) {
     this._time = v;
   }
+  public pid = 0;
 }
