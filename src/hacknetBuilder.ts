@@ -2,8 +2,8 @@ import { NodeStats, NS } from '@ns'
 
 export async function main(ns: NS): Promise<void> {
   ns.tail();
-  ns.disableLog("sleep");
-  ns.disableLog("getServerMoneyAvailable");
+  ns.disableLog("ALL");
+  ns.clearLog();
   while (true) {
     const nodes = getNodeStats(ns);
     const action = getCheapestUpgrade(ns, nodes);
