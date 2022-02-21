@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "watch": "tsc-watch --onSuccess 'node ./server.js'",
+    "watch": "npx tsc -w",
+    "serve": "tsc-watch --onSuccess 'node ./server.js'",
     "lint": "eslint . --ext .ts",
     "defs": "node ./updateDefs.js"
   },

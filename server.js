@@ -8,7 +8,17 @@ const dirPath = path.join(__dirname, "dist");
 
 let files = [];
 
-
+const getHash = (input) => {
+  let hash = 0, i, chr
+  let inputString = input.toString();
+  if (inputString.length === 0) return hash
+  for (i = 0; i < inputString.length; i++) {
+      chr = inputString.charCodeAt(i)
+      hash = ((hash << 5) - hash) + chr
+      hash |= 0 // Convert to 32bit integer
+  }
+  return hash
+}
 
 var app = express();
 app.use(cors({
@@ -18,7 +28,12 @@ app.use(cors({
 app.use(express.static(dirPath));
 app.get('/', async (req, res) => {
   files = await fs.promises.readdir(dirPath);
-  res.send(files);
+  var records = [];
+  for(file of files) {
+    const content = await fs.promises.readFile(path.join(dirPath,file));
+    records.push({name: file, hash: getHash(content)});
+  }
+  res.send(records);
 })
 
 var server = app.listen(PORT);
