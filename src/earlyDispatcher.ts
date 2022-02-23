@@ -7,6 +7,7 @@ import { ProcessTiming } from '/ProcessTiming';
 
 export async function main(ns: NS): Promise<void> {
   //scan for all available servers
+  let buy = false;
   ns.disableLog("ALL");
   ns.clearLog();
   ns.tail();
@@ -123,6 +124,12 @@ export async function main(ns: NS): Promise<void> {
       }
     }
     await ns.sleep(order[order.length - 1].time);
+    if(buy) {
+      const buypid = ns.exec("buySevers2.js", "home", 1);
+      await ns.sleep(30 * 1000)
+      if (ns.ps("home").find(p => p.pid == buypid) == undefined) buy = false;
+      ns.kill(buypid);
+    }
   }
 }
 

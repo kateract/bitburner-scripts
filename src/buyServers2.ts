@@ -84,7 +84,7 @@ export async function main(ns: NS): Promise<void> {
 					const newRatios = await maximize(ns, servers[index], (Math.floor(servers[index].maxRam/1.75)));
 					ns.exec("dispatcher.js", "home", 1, proc.args[0], proc.args[1], newRatios.hackThreads);
 				}
-				proc = ns.ps().find(p => p.filename == "dispatcher2.js" && p.args[0] == host)
+				proc = ns.ps().find(p => p.filename == "dispatcher2.js" && p.args[1] == host)
 				if (proc) {
 					ns.kill(proc.pid)
 					ns.exec("dispatcher2.js", "home", 1, proc.args[0], proc.args[1]);

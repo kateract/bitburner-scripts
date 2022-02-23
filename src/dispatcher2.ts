@@ -1,7 +1,7 @@
 import { NS } from '@ns'
 import { batchHWGW, batchPrepare } from '/functions';
 import { prepareServer } from '/prepareServer';
-import { getRatios, maximizeRatios, maximize } from '/ratios'
+import { getRatios, maximizeRatios, maximize, getRatiosSummary } from '/ratios'
 import { Port } from '/ports';
 import { getServerSummary } from '/visualize';
 import { ProcessTiming } from '/ProcessTiming';
@@ -35,12 +35,13 @@ export async function main(ns: NS): Promise<void> {
       }
       else {
         console.log(`done waiting for ${host} targeting ${target}`)
+        batches = [];
       }
     }
     const targetInfo = ns.getServer(target);
     const hostInfo = ns.getServer(host);
     const threads = Math.floor(hostInfo.maxRam / 1.8);
-    const ratios = hostInfo.purchasedByPlayer && hackThreads == 0 ? await maximizeRatios(ns, targetInfo, hostInfo, false) : getRatios(ns, targetInfo, hackThreads);
+    const ratios = hostInfo.purchasedByPlayer && hackThreads == 0 ? await maximize(ns, targetInfo, threads, false) : getRatios(ns, targetInfo, hackThreads);
     if (ratios.hackThreads < hackThreads) {
       hackThreads = ratios.hackThreads;
     }
@@ -71,7 +72,8 @@ export async function main(ns: NS): Promise<void> {
       }
 
       batches[currentBatch].pid = ns.exec(batches[currentBatch].filename, hostInfo.hostname, batches[currentBatch].threads, targetInfo.hostname, instance++);
-
+      ns.print(`ran ${batches[currentBatch].filename} with ${batches[currentBatch].threads} threads for batch ${currentBatch} with PID ${batches[currentBatch].pid}`);
+      
       if (batches.length > currentBatch + 1) {
         ns.print(`Waiting ${ns.tFormat(batches[currentBatch].adjustedTime - batches[currentBatch + 1].adjustedTime)} before ${batches[currentBatch + 1].filename.slice(0, -3)}(${batches[currentBatch + 1].threads}).`)
         await ns.sleep(batches[currentBatch].adjustedTime - batches[currentBatch + 1].adjustedTime)
@@ -92,7 +94,7 @@ export async function main(ns: NS): Promise<void> {
 
       batches = batches.filter(b => !dead.includes(b.pid))
       currentBatch = batches.findIndex(b => b.pid == 0);
-
+      ns.print(`next batch number: ${currentBatch}`);
       if (!batches[currentBatch] || batches[currentBatch].threads <= 0) {
         console.log("current batch complete", hostInfo.hostname, targetInfo.hostname, currentBatch, batches);
         break;

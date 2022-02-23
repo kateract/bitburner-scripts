@@ -38,6 +38,7 @@ export function getRatios(ns: NS, target: Server, hackThreads = 1): ThreadRatios
   const ratios = new ThreadRatios();
   ratios.hackThreads = Math.ceil(hackThreads);
   let hackAmount = ns.hackAnalyze(hostname) * ratios.hackThreads;
+  
   if (hackAmount >= .99) {
     ratios.hackThreads = ns.hackAnalyzeThreads(hostname, target.moneyMax * .9);
     ns.print(ns.sprintf("Hack amount greater than 99%%(%s) , reducing to %d threads (from %d)", ns.nFormat(hackAmount, "0.000000"), ratios.hackThreads, hackThreads));
@@ -57,7 +58,7 @@ export function getRatios(ns: NS, target: Server, hackThreads = 1): ThreadRatios
 }
 
 export async function maximizeRatios(ns: NS, target: Server, host: Server, printInfo = false): Promise<ThreadRatios> {
-  if (printInfo) ns.tprintf("Maximizing for %s from %s", target.hostname, host.hostname);
+  if (printInfo) ns.print(ns.sprintf("Maximizing for %s from %s", target.hostname, host.hostname));
   const threadLimit = (host.maxRam / 1.75) - 1;
   return maximize(ns, target, threadLimit, printInfo);
 }
@@ -92,8 +93,8 @@ export async function maximize(ns: NS, target: Server, threadLimit: number, prin
   const pointNine = Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable * .9))
   let mark = getRatios(ns, target, pointNine > threadLimit ? threadLimit : pointNine);
   const initialMultiplier = Math.ceil(mark.hackThreads);
-  if (printInfo) tprintRatios(ns, mark);
-  if (printInfo) ns.tprintf("Thread Limit: %d\nInitial Multiplier: %d", threadLimit, initialMultiplier);
+  if (printInfo) ns.print(getRatiosSummary(ns, mark));
+  if (printInfo) ns.print(ns.sprintf("Thread Limit: %d\nInitial Multiplier: %d", threadLimit, initialMultiplier));
   if (mark.totalThreads < threadLimit) {
     return mark;
   }
@@ -103,7 +104,7 @@ export async function maximize(ns: NS, target: Server, threadLimit: number, prin
     const newMult = Math.floor(bottomMultiplier + (topMultiplier - bottomMultiplier) / 2);
     //ns.tprint( target, newMult);
     mark = getRatios(ns, target, newMult);
-    if (printInfo) ns.tprintf("%d - %d - %d - %d", bottomMultiplier, newMult, topMultiplier, mark.totalThreads);
+    if (printInfo) ns.print(ns.sprintf("%d - %d - %d - %d", bottomMultiplier, newMult, topMultiplier, mark.totalThreads));
     if (newMult == bottomMultiplier) {
       return mark;
     }
