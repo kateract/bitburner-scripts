@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { batchHWGW, batchPrepare } from '/functions';
+import { batchHWGW, batchPrepare } from 'lib/functions';
 import { prepareServer } from '/prepareServer';
 import { getRatios, maximizeRatios, maximize, getRatiosSummary } from '/ratios'
 import { Port } from '/ports';
@@ -24,7 +24,7 @@ export async function main(ns: NS): Promise<void> {
   while (true) {
     const pids: number[] = getHackProcs(ns, host, target)
     let waiting = pids.length > 0
-    if (waiting) console.log(`start waiting for ${host} targeting ${target}`)
+    // if (waiting) console.log(`start waiting for ${host} targeting ${target}`)
     while (waiting) {
       const procs = getHackProcs(ns, host, target);
 
@@ -34,7 +34,7 @@ export async function main(ns: NS): Promise<void> {
         await ns.sleep(1000);
       }
       else {
-        console.log(`done waiting for ${host} targeting ${target}`)
+        // console.log(`done waiting for ${host} targeting ${target}`)
         batches = [];
       }
     }
@@ -62,12 +62,12 @@ export async function main(ns: NS): Promise<void> {
     }
     let instance = 0;
     let currentBatch = 0;
-    console.log(hostInfo.hostname, targetInfo.hostname, batches.length, "batches")
+    // console.log(hostInfo.hostname, targetInfo.hostname, batches.length, "batches")
     while (batches.length > currentBatch) {
       ns.print(getServerSummary(ns, ns.getServer(targetInfo.hostname)));
 
       if (!batches[currentBatch] || batches[currentBatch].threads <= 0) {
-        console.log("batch issue", currentBatch, batches);
+        // console.log("batch issue", currentBatch, batches);
         break;
       }
 
@@ -96,7 +96,7 @@ export async function main(ns: NS): Promise<void> {
       currentBatch = batches.findIndex(b => b.pid == 0);
       ns.print(`next batch number: ${currentBatch}`);
       if (!batches[currentBatch] || batches[currentBatch].threads <= 0) {
-        console.log("current batch complete", hostInfo.hostname, targetInfo.hostname, currentBatch, batches);
+        //console.log("current batch complete", hostInfo.hostname, targetInfo.hostname, currentBatch, batches);
         break;
       }
       //console.log(hostInfo.hostname, targetInfo.hostname, currentBatch, batches.length)

@@ -1,7 +1,7 @@
 import { NS, Server } from '@ns'
 import { notStrictEqual } from 'assert';
 import { explore } from '/explore'
-import { batchHWGW, compare } from '/functions';
+import { batchHWGW, compare } from 'lib/functions';
 import { OrchestratedServer, Process } from '/orchestratedServer';
 import { ProcessTiming } from '/ProcessTiming';
 import { ThreadRatios } from '/ThreadRatios';

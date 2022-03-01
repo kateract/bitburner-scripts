@@ -21,12 +21,12 @@ export async function main(ns: NS): Promise<void> {
       for (let i = 0; i < scripts.length; i++) {
         const script = scripts[i].name;
         console.log(script);
-        await ns.wget(`${baseUrl}${script}`, script, 'home');
+        success = await ns.wget(`${baseUrl}${script}`, `/${script}`, 'home');
       }
     }
     if (!continuous) break;
-    await ns.sleep(1000);
-    success = await ns.wget(baseUrl, file, "home");
+    await ns.sleep(2000);
+    success = success && await ns.wget(baseUrl, file, "home");
   }
 }
 

@@ -1,8 +1,13 @@
 import { NS } from '@ns'
-import { deployDispatcher } from '/functions';
+import { deployDispatcher } from 'lib/functions';
 import { Port } from '/ports';
 import { prepareServer } from '/prepareServer';
 import { getRatios, logRatios } from '/ratios'
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function autocomplete(data : AutocompleteData, args : string[]) : string[] {
+  return [...data.servers]
+}
 
 export async function main(ns : NS) : Promise<void> {
   const log = ns.getPortHandle(Port.DISPATCH_LOG);

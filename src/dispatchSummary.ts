@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { compare } from '/functions';
+import { compare } from 'lib/functions';
 import {  getServerSummary } from '/visualize'
 
 export async function main(ns : NS) : Promise<void> {

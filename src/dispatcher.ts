@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { compare } from '/functions';
+import { compare } from 'lib/functions';
 import { prepareServer } from '/prepareServer';
 import { ThreadRatios } from '/ThreadRatios';
 import { getRatios, maximizeRatios } from '/ratios'
@@ -16,7 +16,7 @@ export async function main(ns: NS): Promise<void> {
   while (true) {
     const pids: number[] = getHackProcs(ns, host, target)
     let waiting = pids.length > 0
-    if (waiting) console.log(`start waiting for ${host} targeting ${target}`)
+    // if (waiting) console.log(`start waiting for ${host} targeting ${target}`)
     while (waiting) {
       const procs = getHackProcs(ns, host, target);
 
@@ -26,7 +26,7 @@ export async function main(ns: NS): Promise<void> {
         await ns.sleep(1000);
       } 
       else {
-        console.log(`done waiting for ${host} targeting ${target}`)
+        // console.log(`done waiting for ${host} targeting ${target}`)
       }
     }
     let targetInfo = ns.getServer(target);

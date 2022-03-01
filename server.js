@@ -13,26 +13,35 @@ const getHash = (input) => {
   let inputString = input.toString();
   if (inputString.length === 0) return hash
   for (i = 0; i < inputString.length; i++) {
-      chr = inputString.charCodeAt(i)
-      hash = ((hash << 5) - hash) + chr
-      hash |= 0 // Convert to 32bit integer
+    chr = inputString.charCodeAt(i)
+    hash = ((hash << 5) - hash) + chr
+    hash |= 0 // Convert to 32bit integer
   }
   return hash
 }
 
+const scanDir = async (dir, records, prefix = '') => {
+  files = await fs.promises.readdir(dir);
+  for (file of files) {
+    if (fs.lstatSync(path.resolve(dir, file)).isDirectory()) {
+      await scanDir(path.join(dir, file), records, prefix + file + '/')
+    }
+    else {
+      const content = await fs.promises.readFile(path.join(dirPath, prefix, file));
+      records.push({ name: prefix + file, hash: getHash(content) });
+    }
+  }
+}
+
 var app = express();
 app.use(cors({
-  origin: ['http://localhost:8000','https://danielyxie.github.io']
+  origin: ['http://localhost:8000', 'https://danielyxie.github.io']
 }));
 
 app.use(express.static(dirPath));
 app.get('/', async (req, res) => {
-  files = await fs.promises.readdir(dirPath);
   var records = [];
-  for(file of files) {
-    const content = await fs.promises.readFile(path.join(dirPath,file));
-    records.push({name: file, hash: getHash(content)});
-  }
+  await scanDir(dirPath, records);
   res.send(records);
 })
 

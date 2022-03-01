@@ -1,5 +1,5 @@
 import { NS, Server } from '@ns'
-import { compare, isHackable, isRootable, rootServer, populateServer } from "/functions.js"
+import { compare, isHackable, isRootable, rootServer, populateServer } from "lib/functions.js"
 import { printServerInfo } from "/visualize"
 
 

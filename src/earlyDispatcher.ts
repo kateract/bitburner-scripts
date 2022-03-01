@@ -2,7 +2,7 @@ import { NS, Server } from '@ns'
 import { explore } from '/explore'
 import { getRatiosSummary, maximize } from '/ratios';
 import { getServerInfo } from '/visualize';
-import { batchHWGW, compare } from '/functions';
+import { batchHWGW, compare } from 'lib/functions';
 import { ProcessTiming } from '/ProcessTiming';
 
 export async function main(ns: NS): Promise<void> {
@@ -43,6 +43,7 @@ export async function main(ns: NS): Promise<void> {
     if (ns.args.length > 0) {
       target = ns.getServer(ns.args[0] as string);
       ns.print(`Targeting ${target.hostname} by argument`)
+      ratios = await maximize(ns, target, totalThreads);
     }
 
     ns.print(getServerInfo(ns, target));
@@ -84,7 +85,7 @@ export async function main(ns: NS): Promise<void> {
     let threadsRemain = totalThreads;
     let curServerThreadsRemain = serverThreads[curServerIndex];
     let curProcess = 0;
-    let curProcessThreadsRemain = order[0].threads;
+    let curProcessThreadsRemain = order.length > 0 ? order[0].threads : 0;
     while (threadsRemain > 0 && curProcess < order.length) {
       if (curServerThreadsRemain < curProcessThreadsRemain) {
         //ns.print(`P1 Running ${curServerThreadsRemain} instances of ${order[curProcess].process} on ${scriptHosts[curServerIndex].hostname}`);

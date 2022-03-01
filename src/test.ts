@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { batchHWGW } from '/functions';
+import { batchHWGW } from 'lib/functions';
 import { getRatiosSummary, maximize } from '/ratios';
 // import { Port } from '/ports';
 // import { getRatiosSummary, maximize } from '/ratios'

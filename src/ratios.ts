@@ -34,6 +34,7 @@ export async function main(ns: NS): Promise<void> {
 
 
 export function getRatios(ns: NS, target: Server, hackThreads = 1): ThreadRatios {
+  const log = ns.getPortHandle(Port.DISPATCH_LOG)
   const hostname = target.hostname;
   const ratios = new ThreadRatios();
   ratios.hackThreads = Math.ceil(hackThreads);
@@ -44,9 +45,14 @@ export function getRatios(ns: NS, target: Server, hackThreads = 1): ThreadRatios
     ns.print(ns.sprintf("Hack amount greater than 99%%(%s) , reducing to %d threads (from %d)", ns.nFormat(hackAmount, "0.000000"), ratios.hackThreads, hackThreads));
     hackAmount = ns.hackAnalyze(hostname) * ratios.hackThreads;
   }
-  const catchUp = target.moneyMax - target.moneyAvailable > 0 ? (target.moneyMax - target.moneyAvailable)/ target.moneyMax : 0
-  //ns.tprint(catchUp)
-  ratios.growthThreads = ns.growthAnalyze(hostname, (1 / (1 - hackAmount)) + catchUp) + 1;
+  const catchUp = (target.moneyMax - target.moneyAvailable) > 0 ? (target.moneyMax - target.moneyAvailable)/ target.moneyMax : 0
+  let growAmount = (1 / (1 - hackAmount)) + catchUp;
+  if(growAmount <= 1) {
+    log.write(`growAmount problem: ${hackAmount} hacked, ${catchUp} catchUp, setting growAmount to 10`);
+    console.log(`growAmount problem: ${hackAmount} hacked, ${catchUp} catchUp, setting growAmount to 10`, target, ratios);
+    growAmount = 10;
+  }
+  ratios.growthThreads = ns.growthAnalyze(hostname, growAmount) + 1;
   
   const weakenSecurityAmount = ns.weakenAnalyze(1);
   ratios.weakenHackThreads = (ns.hackAnalyzeSecurity(ratios.hackThreads) + target.hackDifficulty - target.minDifficulty) / weakenSecurityAmount + 1;
@@ -59,7 +65,7 @@ export function getRatios(ns: NS, target: Server, hackThreads = 1): ThreadRatios
 
 export async function maximizeRatios(ns: NS, target: Server, host: Server, printInfo = false): Promise<ThreadRatios> {
   if (printInfo) ns.print(ns.sprintf("Maximizing for %s from %s", target.hostname, host.hostname));
-  const threadLimit = (host.maxRam / 1.75) - 1;
+  const threadLimit = (host.maxRam / 1.8) - 1;
   return maximize(ns, target, threadLimit, printInfo);
 }
 

@@ -1,5 +1,5 @@
 import { NS, Server } from '@ns'
-import { isHackable } from '/functions';
+import { isHackable } from 'lib/functions';
 
 
 export function printServerInfo(ns: NS, serverInfo: Server, rank = 0): void {

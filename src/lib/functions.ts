@@ -28,7 +28,7 @@ export function isRootable(ns: NS, serverInfo: Server): boolean {
 /** @param {NS} ns **/
 export function killProcesses(ns: NS, serverInfo: Server): boolean {
   if (!serverInfo.hasAdminRights) return false;
-  //ns.tprintf("killing processes on %s", serverInfo.server);
+  //ns.tprintf("killing processes on %s", serverInfo.hostname);
   const procs = ns.ps(serverInfo.hostname);
   procs.forEach(p => ns.kill(p.filename, serverInfo.hostname, ...p.args));
   return true;
@@ -130,7 +130,7 @@ export function batchPrepare (ns: NS, target: Server, threadLimit: number, batch
   let weakenPhaseThreads = 0
   let weakenTime = 0
   if (target.minDifficulty < target.hackDifficulty) {
-    console.log('weakening', target.hostname)
+    //console.log('weakening', target.hostname)
     const difference = target.hackDifficulty - target.minDifficulty;
     weakenPhaseThreads = Math.ceil(difference / ns.weakenAnalyze(1));
     weakenTime = ns.formulas.hacking.weakenTime(target, ns.getPlayer())
@@ -140,11 +140,11 @@ export function batchPrepare (ns: NS, target: Server, threadLimit: number, batch
       offset -= weakenTime + spacing
       simServer.hackDifficulty -= 0.05 * threadLimit;
       weakenPhaseThreads -= threadLimit;
-      console.log(batch.length, offset);
+      //console.log(batch.length, offset);
     }
     batch.push(new ProcessTiming("weaken.js", weakenTime, weakenPhaseThreads, offset))
   }
-  console.log("growing", target.hostname)
+  //console.log("growing", target.hostname)
   let remGrowThreads = ns.growthAnalyze(target.hostname, target.moneyMax / target.moneyAvailable);
   const growSecIncrease = ns.growthAnalyzeSecurity(remGrowThreads);
   const reqWeakenThreads = growSecIncrease / 0.05;
@@ -164,7 +164,7 @@ export function batchPrepare (ns: NS, target: Server, threadLimit: number, batch
     offset -= weakenTime + offset + spacing * 3
     remGrowThreads -= curGrowThreads;
     remGrowPhaseThreads = remGrowThreads + Math.ceil(ns.growthAnalyzeSecurity(remGrowThreads) / 0.05);
-    console.log(batch.length, offset);
+    //console.log(batch.length, offset);
   }
   batch.push(new ProcessTiming("grow.js", ns.formulas.hacking.growTime(simServer, ns.getPlayer()), remGrowPhaseThreads, offset + spacing * 2))
   batch.push(new ProcessTiming("weaken.js", ns.formulas.hacking.weakenTime(simServer, ns.getPlayer()), Math.ceil(ns.growthAnalyzeSecurity(remGrowPhaseThreads) / 0.05) , offset + spacing))

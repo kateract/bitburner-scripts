@@ -1,6 +1,6 @@
 import { NS, ProcessInfo } from '@ns'
 
-import { killProcesses, populateServer, compare, GB_MULT } from '/functions';
+import { killProcesses, populateServer, compare, GB_MULT } from 'lib/functions';
 import { maximize } from '/ratios';
 
 /** @param {NS} ns **/
@@ -19,7 +19,7 @@ export async function main(ns: NS): Promise<void> {
 	if(ns.args.length > 0){
 		level = (ns.args[0] as number) - 1;
 	} else {
-		while ((ns.getServerMoneyAvailable("home") * .75 / 25) > ns.getPurchasedServerCost(levels[level]))
+		while ((ns.getServerMoneyAvailable("home") / 25) > ns.getPurchasedServerCost(levels[level]))
 		{
 			level++;
 		}

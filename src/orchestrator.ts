@@ -1,5 +1,5 @@
 import { NS, ProcessInfo, Server } from '@ns'
-import { deployDispatcher2, isHackable, killProcesses, populateServer, compare } from '/functions'
+import { deployDispatcher2, isHackable, killProcesses, populateServer, compare } from 'lib/functions'
 import { explore } from '/explore'
 import { maximizeRatios } from '/ratios'
 import { Port } from '/ports';

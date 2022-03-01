@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { isHackable, populateServer, compare } from '/functions'
+import { isHackable, populateServer, compare } from 'lib/functions'
 import { explore } from '/explore'
 
 export async function main(ns : NS) : Promise<void> {
