@@ -6,9 +6,9 @@ import { printServerInfo } from "/visualize"
 /** @param {NS} ns **/
 export async function main(ns: NS): Promise<void> {
 	const servers = await explore(ns, 'home');
-	servers.sort((a, b) => compare(a.moneyMax, b.moneyMax, true))
+	servers.sort((a, b) => compare(a.moneyMax || 0, b.moneyMax || 0, true))
 	let index = 1;
-	servers.filter(s => isHackable(ns, s) && s.moneyMax > 0).forEach(s => printServerInfo(ns, s, index++));
+	servers.filter(s => isHackable(ns, s) && s.moneyMax || 0 > 0).forEach(s => printServerInfo(ns, s, index++));
 	ns.tprintf("%-d Servers Probed", servers.length);
 	ns.tprintf("%-d Hackable Servers", servers.filter(s => isHackable(ns, s)).length)
 	ns.tprintf("%-d Rootable Servers", servers.filter(s => isRootable(ns, s)).length)

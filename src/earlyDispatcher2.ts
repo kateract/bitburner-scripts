@@ -28,7 +28,7 @@ export async function main(ns: NS): Promise<void> {
 
         //find best target
         const level = player.skills.hacking;
-        const hackTargets = servers.filter(s => s.hasAdminRights && s.moneyMax > 0 && s.requiredHackingSkill <= level)
+        const hackTargets = servers.filter(s => s.hasAdminRights && s.moneyMax || 0 > 0 && s.requiredHackingSkill || 0 <= level)
         var mpsList = hackTargets.map(s => getMoneyPerSecond2(ns, player, s));
         var target = hackTargets[mpsList.indexOf(Math.max(...mpsList))];
 
@@ -43,7 +43,7 @@ export async function main(ns: NS): Promise<void> {
 function getMoneyPerSecond2(ns: NS, player: Player, server: Server) {
     var theoryServer = ns.getServer(server.hostname)
     theoryServer.moneyAvailable = server.moneyMax
-    return theoryServer.moneyMax / ns.formulas.hacking.weakenTime(theoryServer, player) * 1000;
+    return theoryServer.moneyMax! / ns.formulas.hacking.weakenTime(theoryServer, player) * 1000;
 }
 
 function simActions(ns: NS, player: Player, servers: Server[], actions: Action[], targetDate: Date|null = null) {
@@ -55,19 +55,19 @@ function simActions(ns: NS, player: Player, servers: Server[], actions: Action[]
         switch (action.ActionType) {
             case ActionType.HACK:
                 host.ramUsed -= ns.getScriptRam("hack.js", host?.hostname) * action.Threads;
-                target.moneyAvailable -= ns.formulas.hacking.hackPercent(target, player) * action.Threads * target.moneyAvailable;
-                target.hackDifficulty += action.Threads * 0.002;
+                target.moneyAvailable! -= ns.formulas.hacking.hackPercent(target, player) * action.Threads * target.moneyAvailable!;
+                target.hackDifficulty! += action.Threads * 0.002;
                 player.exp.hacking += ns.formulas.hacking.hackExp(target, player) * action.Threads;
                 break;
             case ActionType.GROW:
                 host.ramUsed -= ns.getScriptRam("grow.js", host?.hostname) * action.Threads;
-                target.hackDifficulty += action.Threads * 0.004
-                target.moneyAvailable += ns.formulas.hacking.growPercent(target, action.Threads, player) * target.moneyAvailable;
+                target.hackDifficulty! += action.Threads * 0.004
+                target.moneyAvailable! += ns.formulas.hacking.growPercent(target, action.Threads, player) * target.moneyAvailable!;
                 
                 break;
             case ActionType.WEAKEN:
                 host.ramUsed -= ns.getScriptRam("weaken.js", host?.hostname) * action.Threads;
-                target.hackDifficulty -= action.Threads * 0.05
+                target.hackDifficulty! -= action.Threads * 0.05
                 break;
             default:
                 break;

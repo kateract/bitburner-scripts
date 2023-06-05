@@ -20,7 +20,7 @@ export async function main(ns : NS) : Promise<void> {
     threads = multiplier;
   }
   else {
-    threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable * multiplier));
+    threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable || 0 * multiplier));
   }
   const ratios = await maximize(ns, target, (host.maxRam - host.ramUsed)/2);// getRatios(ns, target, threads);
   deployDispatcher(ns, host.hostname,host.hostname, target.hostname, ratios);

@@ -45,7 +45,7 @@ export async function main(ns: NS): Promise<void> {
     if (ratios.hackThreads < hackThreads) {
       hackThreads = ratios.hackThreads;
     }
-    if (targetInfo.moneyMax * .95 > targetInfo.moneyAvailable || targetInfo.hackDifficulty > targetInfo.minDifficulty * 1.2) {
+    if (targetInfo.moneyMax! * .95 > targetInfo.moneyAvailable! || targetInfo.hackDifficulty! > targetInfo.minDifficulty! * 1.2) {
       if (messages.length > 0) {
         for (let i = 0; i < messages.length; i++) {
           log.write(messages.shift() as string);

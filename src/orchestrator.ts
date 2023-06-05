@@ -139,5 +139,5 @@ function getMoneyPerSecond(ns: NS, server: Server) {
   const tserver = ns.getServer(server.hostname);
   tserver.moneyAvailable = tserver.moneyMax
   tserver.hackDifficulty = tserver.minDifficulty
-  return tserver.moneyMax / ns.formulas.hacking.weakenTime(tserver, player) * 1000 * ns.formulas.hacking.hackChance(tserver, player);
+  return tserver.moneyMax! / ns.formulas.hacking.weakenTime(tserver, player) * 1000 * ns.formulas.hacking.hackChance(tserver, player);
 }

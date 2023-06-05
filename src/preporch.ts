@@ -9,7 +9,7 @@ export async function main(ns : NS) : Promise<void> {
   const threadLimits = purchasedServers.map(s => Math.floor(s.maxRam / scriptCost));
   let totalThreads = 0;
   const targetServers = servers.filter(s => isHackable(ns, s));
-  targetServers.sort((a, b) => compare(a.requiredHackingSkill, b.requiredHackingSkill, true))
+  targetServers.sort((a, b) => compare(a.requiredHackingSkill!, b.requiredHackingSkill!, true))
   
   for (let i = 0; i < purchasedServers.length; i++) {
     ns.tprintf("Server: %s  Threads: %d  Target: %s", purchasedServers[i].hostname, threadLimits[i], targetServers[i]?.hostname);

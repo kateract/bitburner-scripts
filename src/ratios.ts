@@ -13,7 +13,7 @@ export async function main(ns: NS): Promise<void> {
     threads = limMultArg;
   }
   else {
-    threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable * limMultArg));
+    threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable! * limMultArg));
   }
   const ratios = getRatios(ns, target, threads);
   ns.print(getRatiosSummary(ns, ratios));
@@ -41,11 +41,11 @@ export function getRatios(ns: NS, target: Server, hackThreads = 1): ThreadRatios
   let hackAmount = ns.hackAnalyze(hostname) * ratios.hackThreads;
   
   if (hackAmount >= .99) {
-    ratios.hackThreads = ns.hackAnalyzeThreads(hostname, target.moneyMax * .9);
+    ratios.hackThreads = ns.hackAnalyzeThreads(hostname, target.moneyMax! * .9);
     ns.print(ns.sprintf("Hack amount greater than 99%%(%s) , reducing to %d threads (from %d)", ns.formatNumber(hackAmount, 6), ratios.hackThreads, hackThreads));
     hackAmount = ns.hackAnalyze(hostname) * ratios.hackThreads;
   }
-  const catchUp = (target.moneyMax - target.moneyAvailable) > 0 ? (target.moneyMax - target.moneyAvailable)/ target.moneyMax : 0
+  const catchUp = (target.moneyMax! - target.moneyAvailable!) > 0 ? (target.moneyMax! - target.moneyAvailable!)/ target.moneyMax! : 0
   let growAmount = (1 / (1 - hackAmount)) + catchUp;
   if(growAmount <= 1) {
     log.write(`growAmount problem: ${hackAmount} hacked, ${catchUp} catchUp, setting growAmount to 10`);
@@ -55,7 +55,7 @@ export function getRatios(ns: NS, target: Server, hackThreads = 1): ThreadRatios
   ratios.growthThreads = ns.growthAnalyze(hostname, growAmount) + 1;
   
   const weakenSecurityAmount = ns.weakenAnalyze(1);
-  ratios.weakenHackThreads = (ns.hackAnalyzeSecurity(ratios.hackThreads) + target.hackDifficulty - target.minDifficulty) / weakenSecurityAmount + 2;
+  ratios.weakenHackThreads = (ns.hackAnalyzeSecurity(ratios.hackThreads) + target.hackDifficulty! - target.minDifficulty!) / weakenSecurityAmount + 2;
   ratios.weakenGrowthThreads = ns.growthAnalyzeSecurity(Math.ceil(ratios.growthThreads)) / weakenSecurityAmount + 1;
   ratios.hackTime = Math.ceil(ns.getHackTime(hostname));
   ratios.growTime = Math.ceil(ns.getGrowTime(hostname));
@@ -96,7 +96,7 @@ export function getRatiosSummary(ns: NS, ratios: ThreadRatios):string {
 
 export async function maximize(ns: NS, target: Server, threadLimit: number, printInfo = false): Promise<ThreadRatios>
 {
-  const pointNine = Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable * .9))
+  const pointNine = Math.ceil(ns.hackAnalyzeThreads(target.hostname, target.moneyAvailable! * .9))
   let mark = getRatios(ns, target, pointNine > threadLimit ? threadLimit : pointNine);
   const initialMultiplier = Math.ceil(mark.hackThreads);
   if (printInfo) ns.print(getRatiosSummary(ns, mark));

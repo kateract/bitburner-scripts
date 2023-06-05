@@ -4,6 +4,7 @@ import { getRatiosSummary, maximize } from '/ratios';
 import { getServerInfo } from '/visualize';
 import { batchHWGW, compare } from 'lib/functions';
 import { ProcessTiming } from '/ProcessTiming';
+import { IAutocompleteData } from './IAutocompleteData';
 
 export async function main(ns: NS): Promise<void> {
   //scan for all available servers
@@ -26,7 +27,7 @@ export async function main(ns: NS): Promise<void> {
     
     //find best target
     const level = ns.getHackingLevel();
-    const hackTargets = servers.filter(s => s.hasAdminRights && s.moneyMax > 0 && s.requiredHackingSkill <= level)
+    const hackTargets = servers.filter(s => s.hasAdminRights && s.moneyMax || 0 > 0 && s.requiredHackingSkill && s.requiredHackingSkill <= level)
     //ns.print(hackTargets)
     hackTargets.sort((a, b) => compare(getMoneyPerSecond(ns, a), getMoneyPerSecond(ns, b), true));
     let targetIndex = 0;
@@ -64,11 +65,11 @@ export async function main(ns: NS): Promise<void> {
       new ProcessTiming("weaken.js", ratios.weakenTime + 1000, wThreads)
     ]
     let timing = [];
-    if (target.hackDifficulty > target.minDifficulty){
+    if (target.hackDifficulty! > target.minDifficulty!){
       timing = weakenTiming;
       ns.print(`Weakening ${target.hostname} with ${totalThreads} Threads`)
     }
-    else if (target.moneyAvailable < target.moneyMax) {
+    else if (target.moneyAvailable! < target.moneyMax!) {
       timing = growTiming;
       ns.print(`Growing ${target.hostname} with ${totalThreads - wThreads} grow threads and ${wThreads} weaken threads`)
     }
@@ -134,5 +135,8 @@ export async function main(ns: NS): Promise<void> {
   }
 }
 function getMoneyPerSecond(ns: NS, server: Server) {
-  return server.moneyMax / ns.getWeakenTime(server.hostname) * 1000;
+  return server.moneyMax! / ns.getWeakenTime(server.hostname) * 1000;
+}
+export function autocomplete(data: IAutocompleteData, args : string[]) : string[] {
+  return [...data.servers]
 }

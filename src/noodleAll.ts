@@ -10,7 +10,7 @@ export async function main(ns : NS) : Promise<void> {
 
       const threads = Math.floor(s.maxRam / ns.getScriptRam("weaken.js"));
       //ns.tprint(s, threads);
-      ns.exec("noodles.js", "home", 1, s.hostname, s.minDifficulty, s.moneyMax, threads);
+      ns.exec("noodles.js", "home", 1, s.hostname, s.minDifficulty!, s.moneyMax!, threads);
     }
     await ns.sleep(200);
   }

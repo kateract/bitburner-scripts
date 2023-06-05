@@ -26,7 +26,7 @@ export async function prepareServer(ns: NS, host: Server, target: Server, thread
 }
 
 export async function growToMaximum(ns: NS, host: Server, targetServer: Server, threadLimit: number, printInfo = false): Promise<Server> {
-  while (targetServer.moneyMax > targetServer.moneyAvailable) {
+  while (targetServer.moneyMax! > targetServer.moneyAvailable!) {
     const sw = ns.weakenAnalyze(1);
     const sg = ns.growthAnalyzeSecurity(1);
     if (threadLimit == 0) host = ns.getServer( host.hostname);
@@ -48,10 +48,10 @@ export async function growToMaximum(ns: NS, host: Server, targetServer: Server, 
 }
 
 export async function weakenToMinimum(ns: NS, host: Server, target: Server, threadLimit: number, printInfo = false): Promise<Server> {
-  while (target.hackDifficulty > target.minDifficulty) {
+  while (target.hackDifficulty! > target.minDifficulty!) {
     if (threadLimit == 0) host = ns.getServer( host.hostname);
     const useableThreads = threadLimit > 0 ? threadLimit : ((host.maxRam/1.75) - 1)
-    const difference = target.hackDifficulty - target.minDifficulty;
+    const difference = target.hackDifficulty! - target.minDifficulty!;
     const threads = Math.ceil(difference / ns.weakenAnalyze(1));
     if (printInfo)
       ns.print(ns.sprintf("Need %d threads to weaken %s", threads, target.hostname));

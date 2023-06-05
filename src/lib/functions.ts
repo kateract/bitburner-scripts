@@ -6,7 +6,7 @@ import { ProcessTiming } from '/ProcessTiming';
 export const GB_MULT = 1073741824;
 
 export function isHackable(ns: NS, serverInfo: Server): boolean {
-  return serverInfo.moneyMax > 0 && serverInfo.requiredHackingSkill <= ns.getHackingLevel() && serverInfo.hasAdminRights
+  return (serverInfo.moneyMax ?? 0) > 0 && (serverInfo.requiredHackingSkill ?? 0) <= ns.getHackingLevel() && serverInfo.hasAdminRights
 }
 
 /** @param {NS} ns **/
@@ -21,7 +21,7 @@ export function isRootable(ns: NS, serverInfo: Server): boolean {
   portAttacks += ns.fileExists("relaySMTP.exe") ? 1 : 0;
   portAttacks += ns.fileExists("HTTPWorm.exe") ? 1 : 0;
   portAttacks += ns.fileExists("SQLInject.exe") ? 1 : 0;
-  return portAttacks >= serverInfo.numOpenPortsRequired;
+  return portAttacks >= (serverInfo.numOpenPortsRequired ?? 0);
 }
 
 
@@ -76,6 +76,7 @@ export async function populateServer(ns: NS, server: string | Server): Promise<b
   await ns.scp('ThreadRatios.js', host, "home");
   await ns.scp('noodles.js', host, "home");
   await ns.scp('ports.js', host, "home");
+  await ns.scp('autoConnect.js', host, "home");
   return true;
 }
 
@@ -129,23 +130,23 @@ export function batchPrepare (ns: NS, target: Server, threadLimit: number, batch
   const simServer = ns.getServer(target.hostname);
   let weakenPhaseThreads = 0
   let weakenTime = 0
-  if (target.minDifficulty < target.hackDifficulty) {
+  if (target.minDifficulty! < target.hackDifficulty!) {
     //console.log('weakening', target.hostname)
-    const difference = target.hackDifficulty - target.minDifficulty;
+    const difference = target.hackDifficulty! - target.minDifficulty!;
     weakenPhaseThreads = Math.ceil(difference / ns.weakenAnalyze(1));
     weakenTime = ns.formulas.hacking.weakenTime(target, ns.getPlayer())
     while (weakenPhaseThreads > threadLimit) {
       weakenTime = ns.formulas.hacking.weakenTime(simServer, ns.getPlayer())
       batch.push(new ProcessTiming("weaken.js", weakenTime, threadLimit, offset))
       offset -= weakenTime + spacing
-      simServer.hackDifficulty -= 0.05 * threadLimit;
+      simServer.hackDifficulty! -= 0.05 * threadLimit;
       weakenPhaseThreads -= threadLimit;
       //console.log(batch.length, offset);
     }
     batch.push(new ProcessTiming("weaken.js", weakenTime, weakenPhaseThreads, offset))
   }
   //console.log("growing", target.hostname)
-  let remGrowThreads = ns.growthAnalyze(target.hostname, target.moneyMax / target.moneyAvailable);
+  let remGrowThreads = ns.growthAnalyze(target.hostname, target.moneyMax! / target.moneyAvailable!);
   const growSecIncrease = ns.growthAnalyzeSecurity(remGrowThreads);
   const reqWeakenThreads = growSecIncrease / 0.05;
   let remGrowPhaseThreads = remGrowThreads + reqWeakenThreads;

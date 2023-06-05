@@ -35,7 +35,7 @@ export async function main(ns: NS): Promise<void> {
     if (ratios.hackThreads < hackThreads) {
       hackThreads = ratios.hackThreads;
     }
-    if (targetInfo.moneyMax * .95 > targetInfo.moneyAvailable || targetInfo.hackDifficulty > targetInfo.minDifficulty * 1.2) {
+    if (targetInfo.moneyMax! * .95 > targetInfo.moneyAvailable! || targetInfo.hackDifficulty! > targetInfo.minDifficulty! * 1.2) {
       if (messages.length > 0) {
         for (let i = 0; i < messages.length; i++)
         {
@@ -77,19 +77,19 @@ export async function main(ns: NS): Promise<void> {
       if (cont) cont = runProc(order[3].item, ratios) > 0;
       await ns.sleep(ratios.hackTime+ 500);
       targetInfo = ns.getServer(targetInfo.hostname);
-      messages.push(ns.sprintf("Actual Hack Amount: %s (expected %s)", ns.nFormat((targetInfo.moneyMax - targetInfo.moneyAvailable) / targetInfo.moneyMax, "0.00000"), ns.nFormat(ns.hackAnalyze(targetInfo.hostname)* ratios.hackThreads, "0.00000")));
+      messages.push(ns.sprintf("Actual Hack Amount: %s (expected %s)", ns.formatNumber((targetInfo.moneyMax! - targetInfo.moneyAvailable!) / targetInfo.moneyMax!), ns.formatNumber(ns.hackAnalyze(targetInfo.hostname)* ratios.hackThreads)));
       await ns.sleep(1000);
       targetInfo = ns.getServer(targetInfo.hostname)
       
-      if (targetInfo.hackDifficulty > targetInfo.baseDifficulty) {
+      if (targetInfo.hackDifficulty! > targetInfo.baseDifficulty!) {
         messages.push(ns.sprintf("Target %s Hack weaken ineffective:", targetInfo.hostname))
         messages.push(getServerSummary(ns, targetInfo));
         ns.print(getServerSummary(ns, targetInfo));
       }
       await ns.sleep(1000)
       targetInfo = ns.getServer(targetInfo.hostname);
-      if (targetInfo.moneyMax > targetInfo.moneyAvailable) {
-        const shortGrowthThreads = Math.ceil(ns.growthAnalyze(targetInfo.hostname, targetInfo.moneyMax / targetInfo.moneyAvailable));
+      if (targetInfo.moneyMax! > targetInfo.moneyAvailable!) {
+        const shortGrowthThreads = Math.ceil(ns.growthAnalyze(targetInfo.hostname, targetInfo.moneyMax! / targetInfo.moneyAvailable!));
         messages.push(ns.sprintf("Target %s Grow ineffective, %d more threads required(was %d):", targetInfo.hostname, shortGrowthThreads, ratios.growthThreads));
         const gmsg = getServerSummary(ns, targetInfo)
         ns.print(gmsg);
@@ -98,7 +98,7 @@ export async function main(ns: NS): Promise<void> {
       }
       await ns.sleep(1000)
       targetInfo = ns.getServer(targetInfo.hostname);
-      if (targetInfo.hackDifficulty > targetInfo.baseDifficulty) {
+      if (targetInfo.hackDifficulty! > targetInfo.baseDifficulty!) {
         messages.push(ns.sprintf("Target %s Grow weaken ineffective:", targetInfo.hostname));
         messages.push(getServerSummary(ns, targetInfo));
       }
