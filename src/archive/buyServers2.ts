@@ -1,6 +1,6 @@
 import { NS, ProcessInfo, Server } from '@ns'
 
-import { killProcesses, populateServer, compare, GB_MULT } from 'lib/functions';
+import { populateServer, compare } from '../lib/functions';
 import { maximize } from '/ratios';
 
 /** @param {NS} ns **/
@@ -8,7 +8,6 @@ export async function main(ns: NS): Promise<void> {
 	ns.disableLog("ALL")
 	ns.tail()
 	let level = 5 //zero based level
-	const Multipliers = ns.getBitNodeMultipliers()
 	const MaxServerCount = ns.getPurchasedServerLimit();
 	const serverNames = ns.getPurchasedServers()
 	const servers = serverNames.map(s => ns.getServer( s));
@@ -47,10 +46,10 @@ export async function main(ns: NS): Promise<void> {
 		}
 		for (index; index < MaxServerCount; index++) {
 			const server = index < servers.length ? servers[index] : null;
-			let snum = (index + 1).toString().length == 1 ? '0' + (index + 1).toString() : (index + 1).toString();
+			const snum = (index + 1).toString().length == 1 ? '0' + (index + 1).toString() : (index + 1).toString();
 			const host = server ? server.hostname : "pserv-" + snum; 
 			
-			let ps: ProcessInfo[] = [] 
+			const ps: ProcessInfo[] = [] 
 			//wait until you have enough money
 			while (cost > ns.getServerMoneyAvailable("home")/2) {
 				await ns.sleep(30 * 1000);

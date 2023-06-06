@@ -1,7 +1,6 @@
 import { NS } from '@ns'
 import { batchHWGW, batchPrepare } from 'lib/functions';
-import { prepareServer } from '/prepareServer';
-import { getRatios, maximizeRatios, maximize, getRatiosSummary } from '/ratios'
+import { getRatios, maximize } from '/ratios'
 import { Port } from '/ports';
 import { getServerSummary } from '/visualize';
 import { ProcessTiming } from '/ProcessTiming';
@@ -21,7 +20,7 @@ export async function main(ns: NS): Promise<void> {
   let hackThreads = isNaN(ns.args[2] as number) ? 0 : ns.args[2] as number;
   const messages: string[] = [];
   let batches: ProcessTiming[] = [];
-  while (true) {
+  while (hackThreads > 0) {
     const pids: number[] = getHackProcs(ns, host, target)
     let waiting = pids.length > 0
     // if (waiting) console.log(`start waiting for ${host} targeting ${target}`)
@@ -45,7 +44,8 @@ export async function main(ns: NS): Promise<void> {
     if (ratios.hackThreads < hackThreads) {
       hackThreads = ratios.hackThreads;
     }
-    if (targetInfo.moneyMax! * .95 > targetInfo.moneyAvailable! || targetInfo.hackDifficulty! > targetInfo.minDifficulty! * 1.2) {
+    if(!targetInfo.moneyAvailable || !targetInfo.moneyMax || !targetInfo.hackDifficulty || !targetInfo.minDifficulty) return;
+    if (targetInfo.moneyMax * .95 > targetInfo.moneyAvailable || targetInfo.hackDifficulty > targetInfo.minDifficulty * 1.2) {
       if (messages.length > 0) {
         for (let i = 0; i < messages.length; i++) {
           log.write(messages.shift() as string);

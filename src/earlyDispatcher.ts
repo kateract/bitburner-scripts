@@ -1,4 +1,4 @@
-import { NS, Player, Server } from '@ns'
+import { NS, Server } from '@ns'
 import { explore } from '/explore'
 import { getRatiosSummary, maximize } from '/ratios';
 import { getServerInfo } from '/visualize';
@@ -13,7 +13,7 @@ export async function main(ns: NS): Promise<void> {
   ns.clearLog();
   ns.tail();
   let cycle = 1;
-  while (true) {
+  while (cycle > 0) {
     ns.print("");
     ns.print(`=== Beginning Cycle ${cycle++} ===`);
     ns.print("");
@@ -65,11 +65,11 @@ export async function main(ns: NS): Promise<void> {
       new ProcessTiming("weaken.js", ratios.weakenTime + 1000, wThreads)
     ]
     let timing = [];
-    if (target.hackDifficulty! > target.minDifficulty!){
+    if (target && target.hackDifficulty && target.minDifficulty && target.hackDifficulty > target.minDifficulty){
       timing = weakenTiming;
       ns.print(`Weakening ${target.hostname} with ${totalThreads} Threads`)
     }
-    else if (target.moneyAvailable! < target.moneyMax!) {
+    else if (target && target.moneyAvailable && target.moneyMax && target.moneyAvailable < target.moneyMax) {
       timing = growTiming;
       ns.print(`Growing ${target.hostname} with ${totalThreads - wThreads} grow threads and ${wThreads} weaken threads`)
     }
@@ -135,8 +135,11 @@ export async function main(ns: NS): Promise<void> {
   }
 }
 function getMoneyPerSecond(ns: NS, server: Server) {
-  return server.moneyMax! / ns.getWeakenTime(server.hostname) * 1000;
+  if (server.moneyMax)
+    return server.moneyMax / ns.getWeakenTime(server.hostname) * 1000;
+  return 0;
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function autocomplete(data: IAutocompleteData, args : string[]) : string[] {
   return [...data.servers]
 }
