@@ -45,6 +45,9 @@ export async function main(ns: NS): Promise<void> {
     //console.debug(`server level ${level}, firstUnaffordable: ${firstUnaffordableLevel}, minimumServerLevel:${minimumServerLevel(servers)}`)
     //console.debug(servers);
     const targetIndex = cheapestUpgrades[level]
+    while (actionCosts[level][targetIndex] > ns.getServerMoneyAvailable("home")) {
+      await ns.sleep(1000)
+    }
     if (actionCosts[level][targetIndex] < ns.getServerMoneyAvailable("home")) {
       if (targetIndex < servers.length) {
         ns.print(`Upgrading ${servers[targetIndex].hostname} to ${ns.formatRam(levels[level])}`);
@@ -55,7 +58,7 @@ export async function main(ns: NS): Promise<void> {
         ns.purchaseServer(`pserv-${snum}`, levels[level])
       }
     }
-    await ns.sleep(1000);
+    await ns.sleep(10);
     serverNames = ns.getPurchasedServers()
     serverNames.sort((a, b) => compare(a, b));
     servers = serverNames.map(s => ns.getServer(s));

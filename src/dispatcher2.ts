@@ -20,7 +20,7 @@ export async function main(ns: NS): Promise<void> {
   let hackThreads = isNaN(ns.args[2] as number) ? 0 : ns.args[2] as number;
   const messages: string[] = [];
   let batches: ProcessTiming[] = [];
-  while (hackThreads > 0) {
+  while (true) {
     const pids: number[] = getHackProcs(ns, host, target)
     let waiting = pids.length > 0
     // if (waiting) console.log(`start waiting for ${host} targeting ${target}`)
