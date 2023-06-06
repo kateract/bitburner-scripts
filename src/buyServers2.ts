@@ -9,9 +9,7 @@ export async function main(ns: NS): Promise<void> {
 	ns.tail()
 	let level = 5 //zero based level
 	const Multipliers = ns.getBitNodeMultipliers()
-	const MaxServerCount = Multipliers.PurchasedServerLimit * 25
-
-	const limit = ns.getPurchasedServerLimit();
+	const MaxServerCount = ns.getPurchasedServerLimit();
 	const serverNames = ns.getPurchasedServers()
 	const servers = serverNames.map(s => ns.getServer( s));
 	servers.sort((a, b) => compare(a.hostname, b.hostname));
@@ -21,7 +19,7 @@ export async function main(ns: NS): Promise<void> {
 	if(ns.args.length > 0){
 		level = (ns.args[0] as number) - 1;
 	} else {
-		while ((ns.getServerMoneyAvailable("home") / 25) > ns.getPurchasedServerCost(levels[level]) && level <= (levels.length - 1))
+		while ((ns.getServerMoneyAvailable("home") / MaxServerCount) > ns.getPurchasedServerCost(levels[level]) && level <= (levels.length - 1))
 		{
 			level++;
 		}
@@ -31,7 +29,7 @@ export async function main(ns: NS): Promise<void> {
 		ns.print(ns.sprintf("%s - Level %d (%s)", servers[i].hostname, memory[i] + 1 , levels[memory[i]] ))
 	}
 	let index = 0
-	if (servers.length < limit) {
+	if (servers.length < MaxServerCount) {
 		index = servers.length;
 	} else {
 		level = Math.min(...memory) + 1;
@@ -47,7 +45,7 @@ export async function main(ns: NS): Promise<void> {
 			await ns.sleep(2000);
 			continue;
 		}
-		for (index; index < limit; index++) {
+		for (index; index < MaxServerCount; index++) {
 			const server = index < servers.length ? servers[index] : null;
 			let snum = (index + 1).toString().length == 1 ? '0' + (index + 1).toString() : (index + 1).toString();
 			const host = server ? server.hostname : "pserv-" + snum; 
