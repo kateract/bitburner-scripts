@@ -14,8 +14,8 @@ export function getServerInfo(ns: NS, serverInfo: Server, rank = 0): string {
     isHackable(ns, serverInfo) ? "HACKABLE" : "",
     serverInfo.hackDifficulty,
     serverInfo.minDifficulty,
-    ns.nFormat(serverInfo.moneyAvailable ?? 0, "0.0a"),
-    ns.nFormat(serverInfo.moneyMax ?? 0, "0.0a"),
+    ns.formatNumber(serverInfo.moneyAvailable ?? 0),
+    ns.formatNumber(serverInfo.moneyMax ?? 0),
     serverInfo.maxRam);
 
 }

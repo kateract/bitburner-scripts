@@ -6,12 +6,12 @@ export async function main(ns: NS) {
     ns.tail();
 
     const CityName = ns.enums.CityName;
-    let states = ['START', 'PURCHASE', 'PRODUCTION', 'EXPORT', 'SALE'];
+    const states = ['START', 'PURCHASE', 'PRODUCTION', 'EXPORT', 'SALE'];
     const jobs: CorpEmployeePosition[] = ["Operations", "Engineer", "Business", "Management", "Research & Development", "Intern", "Unassigned"];
     const cities = [CityName.Aevum, CityName.Chongqing, CityName.NewTokyo, CityName.Ishima, CityName.Volhaven, CityName.Sector12];
-    let c = ns.corporation
-    let tobaccoProductPrefix = "DeathSticksV";
-    let stage = [0, 0]
+    const c = ns.corporation
+    const tobaccoProductPrefix = "DeathSticksV";
+    const stage = [0, 0]
 
     const constants = c.getConstants();
 

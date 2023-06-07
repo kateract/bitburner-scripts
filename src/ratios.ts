@@ -85,10 +85,10 @@ export function logRatios(ns: NS, ratios: ThreadRatios, port: Port = Port.DISPAT
 }
 export function getRatiosSummary(ns: NS, ratios: ThreadRatios):string {
   const strings: string[] = []
-  strings.push(ns.sprintf("Hack Threads: %d (%s)", ratios.hackThreads, ns.nFormat(ratios.hackThreads, "0.00")));
-  strings.push(ns.sprintf("Growth Threads: %d (%s)", Math.ceil(ratios.growthThreads), ns.nFormat(ratios.growthThreads, "0.00")));
-  strings.push(ns.sprintf("Weaken(hack) Threads: %d (%s)", Math.ceil(ratios.weakenHackThreads), ns.nFormat(ratios.weakenHackThreads, "0.00")));
-  strings.push(ns.sprintf("Weaken(grow) Threads: %d (%s)", Math.ceil(ratios.weakenGrowthThreads), ns.nFormat(ratios.weakenGrowthThreads, "0.00")));
+  strings.push(ns.sprintf("Hack Threads: %d (%s)", ratios.hackThreads, ns.formatNumber(ratios.hackThreads)));
+  strings.push(ns.sprintf("Growth Threads: %d (%s)", Math.ceil(ratios.growthThreads), ns.formatNumber(ratios.growthThreads,)));
+  strings.push(ns.sprintf("Weaken(hack) Threads: %d (%s)", Math.ceil(ratios.weakenHackThreads), ns.formatNumber(ratios.weakenHackThreads)));
+  strings.push(ns.sprintf("Weaken(grow) Threads: %d (%s)", Math.ceil(ratios.weakenGrowthThreads), ns.formatNumber(ratios.weakenGrowthThreads)));
   strings.push(ns.sprintf("%d total threads", ratios.totalThreads))
   return strings.join("\n");
 }

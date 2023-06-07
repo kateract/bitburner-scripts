@@ -92,13 +92,13 @@ class ActionNode {
   public getString(ns: NS): string {
     switch (this.action) {
       case HacknetActions.UPGRADE_LEVEL:
-        return ns.sprintf("Upgrade Level of node %d for %s", this.node, ns.nFormat(this.cost, "$0.00"));
+        return ns.sprintf("Upgrade Level of node %d for %s", this.node, ns.formatNumber(this.cost));
       case HacknetActions.UPGRADE_RAM:
-        return ns.sprintf("Upgrade Ram of node %d for %s", this.node, ns.nFormat(this.cost, "$0.00"));
+        return ns.sprintf("Upgrade Ram of node %d for %s", this.node, ns.formatNumber(this.cost));
       case HacknetActions.UPGRADE_CORE:
-        return ns.sprintf("Upgrade Cores of node %d for %s", this.node, ns.nFormat(this.cost, "$0.00"));
+        return ns.sprintf("Upgrade Cores of node %d for %s", this.node, ns.formatNumber(this.cost));
       case HacknetActions.BUY_NODE:
-        return ns.sprintf("Buy node %d for %s", this.node, ns.nFormat(this.cost, "$0.00"));
+        return ns.sprintf("Buy node %d for %s", this.node, ns.formatNumber(this.cost));
       case HacknetActions.NONE:
         return "No hacknet upgrades available";
     }

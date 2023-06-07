@@ -7,8 +7,6 @@ import { ProcessTiming } from '/ProcessTiming';
 import { IAutocompleteData } from './IAutocompleteData';
 
 export async function main(ns: NS): Promise<void> {
-  //scan for all available servers
-  let buy = false;
   ns.disableLog("ALL");
   ns.clearLog();
   ns.tail();
@@ -27,8 +25,8 @@ export async function main(ns: NS): Promise<void> {
     
     //find best target
     const level = ns.getHackingLevel();
-    const hackTargets = servers.filter(s => s.hasAdminRights && s.moneyMax || 0 > 0 && s.requiredHackingSkill && s.requiredHackingSkill <= level)
-    //ns.print(hackTargets)
+    const hackTargets = servers.filter(s => s.hasAdminRights && (s.moneyMax || 0 > 0) && s.requiredHackingSkill && (s.requiredHackingSkill <= level))
+    //console.log(hackTargets, level)
     hackTargets.sort((a, b) => compare(getMoneyPerSecond(ns, a), getMoneyPerSecond(ns, b), true));
     let targetIndex = 0;
     let ratios = await maximize(ns, hackTargets[0], totalThreads)
@@ -126,12 +124,11 @@ export async function main(ns: NS): Promise<void> {
       }
     }
     await ns.sleep(order[order.length - 1].time);
-    if(buy) {
-      const buypid = ns.exec("buySevers2.js", "home", 1);
-      await ns.sleep(30 * 1000)
-      if (ns.ps("home").find(p => p.pid == buypid) == undefined) buy = false;
-      ns.kill(buypid);
+    let pservs = ns.getPurchasedServers();
+    if (pservs.length == ns.getPurchasedServerLimit() && Math.min(...pservs.map(serv => ns.getServerMaxRam(serv))) > 1000000000000) {
+      ns.spawn("orchestrate.js");
     }
+
   }
 }
 function getMoneyPerSecond(ns: NS, server: Server) {
