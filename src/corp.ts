@@ -107,40 +107,52 @@ export async function main(ns: NS) {
             let maxProds = getMaxProducts(tobaccoName);
             let prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
             let nextProd = Math.max(...prods.map(p => Number.parseInt(p.name.substring(tobaccoProductPrefix.length)))) + 1;
-            if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
-                stage[1] += 1
-                if (stage[1] > 4) {
-                    let worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c)
-                    ns.print(`Discontinuing ${worst.name} (rating: ${worst.effectiveRating})`)
-                    c.discontinueProduct(tobaccoName, worst.name);
-                    await ns.sleep(10);
-                    stage[1] = 0
-                }
-                else {
-                    ns.print("Products full, maturing");
-                }
-            }
-            div = c.getDivision(tobaccoName);
-            prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
-            if (prods.length < maxProds) {
-                ns.print(`Devloping new product: ${tobaccoProductPrefix + nextProd.toString()}`)
-                c.makeProduct(tobaccoName, cities[0], tobaccoProductPrefix + nextProd.toString(), 1e9, 1e9)
-                await ns.sleep(10);
-            }
-            div = c.getDivision(tobaccoName);
-            prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
-            cities.forEach(city => {
-                prods.forEach(p => {
-                    let product = c.getProduct(tobaccoName, city, p.name)
-                    if (product.desiredSellAmount == 0 || product.desiredSellPrice == 0) {
-                        c.sellProduct(tobaccoName, city, product.name, "MAX", "MP", false);
+            await discontinueWorstProductIfFull();
+            await createNewProductIfNotFull();
+            SellAllProducts();
 
+            function SellAllProducts() {
+                div = c.getDivision(tobaccoName);
+                prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
+                cities.forEach(city => {
+                    prods.forEach(p => {
+                        let product = c.getProduct(tobaccoName, city, p.name);
+                        if (product.desiredSellAmount == 0 || product.desiredSellPrice == 0) {
+                            c.sellProduct(tobaccoName, city, product.name, "MAX", "MP", false);
+
+                        }
+                        if (c.hasResearched(tobaccoName, "Market-TA.II")) {
+                            c.setProductMarketTA2(tobaccoName, product.name, true);
+                        }
+                    });
+                });
+            }
+
+            async function createNewProductIfNotFull() {
+                div = c.getDivision(tobaccoName);
+                prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
+                if (prods.length < maxProds && c.getCorporation().funds > 2 * 1e9) {
+                    ns.print(`Devloping new product: ${tobaccoProductPrefix + nextProd.toString()}`);
+                    c.makeProduct(tobaccoName, cities[0], tobaccoProductPrefix + nextProd.toString(), 1e9, 1e9);
+                    await ns.sleep(10);
+                }
+            }
+
+            async function discontinueWorstProductIfFull() {
+                if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
+                    stage[1] += 1;
+                    if (stage[1] > 4) {
+                        let worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c);
+                        ns.print(`Discontinuing ${worst.name} (rating: ${worst.effectiveRating})`);
+                        c.discontinueProduct(tobaccoName, worst.name);
+                        await ns.sleep(10);
+                        stage[1] = 0;
                     }
-                    if (c.hasResearched(tobaccoName, "Market-TA.II")) {
-                        c.setProductMarketTA2(tobaccoName, product.name, true);
+                    else {
+                        ns.print("Products full, maturing");
                     }
-                })
-            });
+                }
+            }
         }
     }
     function getMaxProducts(division: string): number {

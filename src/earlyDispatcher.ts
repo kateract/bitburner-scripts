@@ -125,8 +125,8 @@ export async function main(ns: NS): Promise<void> {
     }
     await ns.sleep(order[order.length - 1].time);
     let pservs = ns.getPurchasedServers();
-    if (pservs.length == ns.getPurchasedServerLimit() && Math.min(...pservs.map(serv => ns.getServerMaxRam(serv))) > 1000000000000) {
-      ns.spawn("orchestrate.js");
+    if (pservs.length == ns.getPurchasedServerLimit() && Math.min(...pservs.map(serv => ns.getServerMaxRam(serv))) > 1000) {
+      ns.spawn("orchestrator.js");
     }
 
   }

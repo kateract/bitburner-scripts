@@ -14,15 +14,16 @@ export class SleeveCrimeStatsObj {
     public expectedValue: number;
 }
 export async function main(ns: NS) {
+    ns.disableLog("sleep");
+    ns.clearLog();
+    ns.tail();
+    
     while (true) {
         const LocationName = ns.enums.LocationName;
         const Courses = ns.enums.UniversityClassType
         const GymType = ns.enums.GymType;
         
-        ns.disableLog("sleep");
-        ns.clearLog();
 
-        ns.tail();
         const s = ns.sleeve;
         let sleeveCount = s.getNumSleeves();
 

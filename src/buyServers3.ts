@@ -7,7 +7,7 @@ export async function main(ns: NS): Promise<void> {
   ns.disableLog("ALL");
   ns.clearLog();
   ns.tail();
-  let level = 5; //zero based level
+  let level = 8; //zero based level
   const MaxServerCount = ns.getPurchasedServerLimit();
   const PurchasedServerMaxRam = ns.getPurchasedServerMaxRam();
 

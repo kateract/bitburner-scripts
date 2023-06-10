@@ -17,8 +17,7 @@ export async function main(ns: NS) {
         { description: "Initial Purchases", action: startUp, parameter: 0 },
         { description: "Waiting for the employers stats to rise", action: waitForTheLazyFucksToGetTheirShitTogether },
         { description: "Buying first production multiplier material batch", action: purchaseMaterials, parameter: 0 },
-        { description: "Wait for 50b", action: waitForCash, parameter: 50000000000},
-        { description: "Expand Springwater", action: expandSpringWater},
+        { description: "Expand Springwater", action: expandSpringWater },
         { description: "Accepting the first investment offer", action: invest, parameter: 1 },
         { description: "Further Upgrades", action: upgradeStuff },
         { description: "Waiting for the employers stats to rise for the second time", action: waitForTheLazyFucksToGetTheirShitTogether },
@@ -195,7 +194,8 @@ export async function main(ns: NS) {
     }
 
     async function expandSpringWater(key?: number) {
-        if(!c.hasUnlock("Export") && c.getUnlockCost("Export") < c.getCorporation().funds){
+
+        if (!c.hasUnlock("Export") && c.getUnlockCost("Export") < c.getCorporation().funds) {
             c.purchaseUnlock("Export")
         }
         let corp = c.getCorporation();
@@ -212,31 +212,39 @@ export async function main(ns: NS) {
             if (!sw.cities.find(c => c == city) && constants.officeInitialCost < c.getCorporation().funds) {
                 c.expandCity(sw.name, city)
             }
+            if (!c.getDivision(waterName).cities.includes(city)) continue;
             let office = c.getOffice(waterName, city);
-            if (!office) return;
+            if (!office) continue;
             if (!c.hasWarehouse(waterName, city) && c.getCorporation().funds > constants.warehouseInitialCost) {
                 c.purchaseWarehouse(waterName, city);
             }
-            c.setSmartSupply(waterName, city, true)
+
             while (office.numEmployees < 3 && c.hireEmployee(waterName, city)) { }
             for (let i = 0; i < 3; i++) {
                 if (office.employeeJobs[jobs[i]] < 1)
                     c.setAutoJobAssignment(waterName, city, jobs[i], 1);
             }
-            c.sellMaterial(waterName, city, "Water", "MAX", "MP")
-            
-            while (c.getWarehouse(waterName, city).level < 3 && c.getUpgradeWarehouseCost(waterName, city) < c.getCorporation().funds) {
-                c.upgradeWarehouse(waterName, city);
-            }
-            if (c.hasUnlock("Export")) {
-                c.exportMaterial(waterName, city, agricultureName, city, "Water", c.getMaterial(waterName, city, "Water").productionAmount)
+            if (c.hasWarehouse(waterName, city)) {
+                c.setSmartSupply(waterName, city, true)
+                c.sellMaterial(waterName, city, "Water", "MAX", "MP")
+
+                while (c.getWarehouse(waterName, city).level < 3 && c.getUpgradeWarehouseCost(waterName, city) < c.getCorporation().funds) {
+                    c.upgradeWarehouse(waterName, city);
+                }
+
+                if (c.hasUnlock("Export") && c.getMaterial(waterName, city, "Water").exports.length == 0) {
+                    c.exportMaterial(waterName, city, agricultureName, city, "Water", "-1  * IPROD");
+                }
             }
         }
         corp = c.getCorporation()
         sw = c.getDivision(waterName);
-        if(cities.map(city => c.getWarehouse(waterName, city).level).every(level => level == 3) && sw) {
+        console.log(sw);
+        if (cities.every(city => sw?.cities.includes(city)) && cities.every(city => c.hasWarehouse(waterName, city)) && cities.map(city => c.getWarehouse(waterName, city).level).every(wlevel => wlevel >= 3) && sw) {
             stage[0] += 1;
             stage[1] = 0;
+        } else {
+            stage[1] += 1;
         }
     }
 
@@ -307,7 +315,7 @@ export async function main(ns: NS) {
         for (let i = 0; i < 7; i++) {
             for (let city of cities) {
                 while (c.getWarehouse(agricultureName, city).level < 10) {
-                    if(c.getUpgradeWarehouseCost(agricultureName, city, 1) < c.getCorporation().funds)
+                    if (c.getUpgradeWarehouseCost(agricultureName, city, 1) < c.getCorporation().funds)
                         c.upgradeWarehouse(agricultureName, city, 1);
                 }
                 complete += c.getWarehouse(agricultureName, city).level == 10 ? 1 : 0;
@@ -361,9 +369,9 @@ export async function main(ns: NS) {
         if (!div.cities.find(c => c == cities[0])) {
             c.expandCity(tobaccoName, cities[0]);
         }
-        let warehouse = c.getWarehouse(tobaccoName, cities[0])
-        if (!warehouse)
+        if (!c.hasWarehouse(tobaccoName, cities[0])) {
             c.purchaseWarehouse(tobaccoName, cities[0]);
+        }
         try {
             let o = c.getOffice(tobaccoName, cities[0]);
             for (let i = o.size / 3; i < 10; i++) {
@@ -376,6 +384,7 @@ export async function main(ns: NS) {
             c.setAutoJobAssignment(tobaccoName, cities[0], jobs[3], Math.ceil(c.getOffice(tobaccoName, cities[0]).size / 5))
             c.setAutoJobAssignment(tobaccoName, cities[0], jobs[4], Math.ceil(c.getOffice(tobaccoName, cities[0]).size / 5))
         } catch { }
+
         //ns.print('check cities')
         for (let city of cities) {
             if (city == cities[0]) continue;
@@ -454,7 +463,7 @@ export async function main(ns: NS) {
         }
         div = c.getDivision(tobaccoName);
         prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
-        if (prods.length < maxProds) {
+        if (prods.length < maxProds && c.getCorporation().funds > 2 * 1e9) {
             ns.print(`Devloping new product: ${tobaccoProductPrefix + nextProd.toString()}`)
             c.makeProduct(tobaccoName, cities[0], tobaccoProductPrefix + nextProd.toString(), 1e9, 1e9)
             await ns.sleep(10);
@@ -492,6 +501,7 @@ export async function main(ns: NS) {
                 c.getOffice(tobaccoName, cities[0]).size >= 30,
                 c.getDivision(tobaccoName).cities.length == 6
             )
+            stage[1] += 1;
         }
     }
 
