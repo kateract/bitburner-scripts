@@ -15,14 +15,17 @@ export async function main(ns: NS) {
 
     const constants = c.getConstants();
 
-    var corp = c.getCorporation();
-    let divisions = corp.divisions.map(d => c.getDivision(d))
-    let div = divisions.find(d => d.type == "Tobacco");
+    const corp = c.getCorporation();
+    const divisions = corp.divisions.map(d => c.getDivision(d))
+    const div = divisions.find(d => d.type == "Tobacco");
     if (!div) return;
-    let tobaccoName = div.name;
+    const tobaccoName = div.name;
+    const rdiv = divisions.find(d => d.type == "Restaurant")
+    if (!rdiv) return;
+    const restName = rdiv.name;
     const levelUpgrades: CorpUpgradeName[] = ["Smart Factories", "Smart Storage", "DreamSense", "Wilson Analytics", "Nuoptimal Nootropic Injector Implants", "Speech Processor Implants", "Neural Accelerators", "FocusWires", "ABC SalesBots", "Project Insight"]
-    
-    while (true) {
+
+    while (stage[0] >= 0) {
         while (c.getCorporation().state == states[0]) {
             await ns.sleep(10);
         }
@@ -30,133 +33,137 @@ export async function main(ns: NS) {
         while (c.getCorporation().state != states[0]) {
             await ns.sleep(10);
         }
-        await checkProducts();
-        await spendMoney();
-        await hirePeople();
+        await checkProducts(tobaccoName, tobaccoProductPrefix);
+        await spendMoney(tobaccoName);
+        await hirePeople(tobaccoName);
+        await checkProducts(restName, "Katdonalds#");
+        await spendMoney(restName);
+        await hirePeople(restName);
         await teaParty(ns);
+    }
 
-        async function spendMoney() {
-            ns.tail()
-            corp = c.getCorporation();
-            var growAveumCost = c.getOfficeSizeUpgradeCost(tobaccoName, cities[0], 15);
-            var buyAdvertCost = c.getHireAdVertCost(tobaccoName);
-            var citycosts = Object.fromEntries(cities.map(city => [city, c.getOfficeSizeUpgradeCost(tobaccoName, city, 15)]));
-            var cheapestCityToUpgrade = cities.reduce((prev, curr) => citycosts[prev] < citycosts[curr] ? prev : curr);
-            var growCheapestCityCost = citycosts[cheapestCityToUpgrade];
-            var wilsonUpgradeCost = c.getUpgradeLevelCost(levelUpgrades[3])
-            var upgradeLevels = Object.fromEntries(constants.upgradeNames.map(upgrade => [upgrade, c.getUpgradeLevel(upgrade)]))
-            var upgrades = constants.upgradeNames.filter(u => upgradeLevels[u] < 100);
-            var upgradeCosts = Object.fromEntries(upgrades.map(upgrade => [upgrade, c.getUpgradeLevelCost(upgrade)]))
-            var cheapestUpgrade = upgrades.reduce((prev, curr) => upgradeCosts[prev] < upgradeCosts[curr] ? prev : curr);
-            // if attainable, upgrade wilson analytics
-            if (corp.funds > wilsonUpgradeCost) {
-                c.levelUpgrade(levelUpgrades[3])
-                ns.print(`buying ${levelUpgrades[3]}`)
-            }
-            else if (corp.revenue * 600 > wilsonUpgradeCost) {
-                ns.print(`waiting for ${levelUpgrades[3]} (${ns.formatNumber(corp.revenue * 600)}, ${ns.formatNumber(wilsonUpgradeCost)})`)
-                return;
-
-            }
-            else if (growAveumCost < buyAdvertCost && corp.funds > growAveumCost)
-            {
-                c.upgradeOfficeSize(tobaccoName, cities[0], 15)
-                ns.print(`Upgrading office in ${cities[0]}`)
-            }
-            else if (buyAdvertCost < corp.funds) {
-                c.hireAdVert(tobaccoName);
-                ns.print(`hiring advert`);
-            }
-            else if (citycosts[cheapestCityToUpgrade] < corp.funds && c.getOffice(tobaccoName, cheapestCityToUpgrade).size < c.getOffice(tobaccoName, cities[0]).size - 75) {
-                c.upgradeOfficeSize(tobaccoName, cheapestCityToUpgrade, 15)
-                ns.print(`upgrading office in ${cheapestCityToUpgrade}`)
-            }
-            else if (upgradeCosts[cheapestUpgrade] < corp.funds) {
-                c.levelUpgrade(cheapestUpgrade);
-                ns.print(`leveling upgrade ${cheapestUpgrade}`)
-            }
+    async function spendMoney(divisionName: string) {
+        ns.tail()
+        const corp = c.getCorporation();
+        const growAveumCost = c.getOfficeSizeUpgradeCost(divisionName, cities[0], 15);
+        const buyAdvertCost = c.getHireAdVertCost(divisionName);
+        const citycosts = Object.fromEntries(cities.map(city => [city, c.getOfficeSizeUpgradeCost(divisionName, city, 15)]));
+        const cheapestCityToUpgrade = cities.reduce((prev, curr) => citycosts[prev] < citycosts[curr] ? prev : curr);
+        const wilsonUpgradeCost = c.getUpgradeLevelCost(levelUpgrades[3])
+        const upgradeLevels = Object.fromEntries(constants.upgradeNames.map(upgrade => [upgrade, c.getUpgradeLevel(upgrade)]))
+        const upgrades = constants.upgradeNames.filter(u => upgradeLevels[u] < 100);
+        const upgradeCosts = Object.fromEntries(upgrades.map(upgrade => [upgrade, c.getUpgradeLevelCost(upgrade)]))
+        const cheapestUpgrade = upgrades.reduce((prev, curr) => upgradeCosts[prev] < upgradeCosts[curr] ? prev : curr);
+        //console.log(citycosts, cheapestCityToUpgrade);
+        // if attainable, upgrade wilson analytics
+        if (corp.funds > wilsonUpgradeCost) {
+            c.levelUpgrade(levelUpgrades[3])
+            ns.print(`buying ${levelUpgrades[3]}`)
+        }
+        else if (corp.revenue * 600 > wilsonUpgradeCost) {
+            ns.print(`waiting for ${levelUpgrades[3]} (${ns.formatNumber(corp.revenue * 600)}, ${ns.formatNumber(wilsonUpgradeCost)})`)
+            return;
 
         }
-
-        async function hirePeople() {
-            while (c.hireEmployee(tobaccoName, cities[0])) { }
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[0], Math.floor(c.getOffice(tobaccoName, cities[0]).size / 5))
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[1], Math.floor(c.getOffice(tobaccoName, cities[0]).size / 5))
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[2], Math.floor(c.getOffice(tobaccoName, cities[0]).size / 5))
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[3], Math.ceil(c.getOffice(tobaccoName, cities[0]).size / 5))
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[4], Math.ceil(c.getOffice(tobaccoName, cities[0]).size / 5))
-
-            for (let city of cities) {
-                if (city == cities[0]) continue;
-                let o = c.getOffice(tobaccoName, city);
-                while (c.hireEmployee(tobaccoName, city)) { }
-                jobs.map(j => c.setAutoJobAssignment(tobaccoName, city, j, 0));
-                let empch = Math.floor((3 / 15) * o.size)
-                let empcl = Math.floor((2 / 15) * o.size)
-                c.setAutoJobAssignment(tobaccoName, city, jobs[0], empch)
-                c.setAutoJobAssignment(tobaccoName, city, jobs[1], empch)
-                c.setAutoJobAssignment(tobaccoName, city, jobs[2], empcl)
-                c.setAutoJobAssignment(tobaccoName, city, jobs[3], empch)
-                c.setAutoJobAssignment(tobaccoName, city, jobs[4], o.size - (3 * empch + empcl))
-                
-            }
+        else if (growAveumCost < buyAdvertCost && corp.funds > growAveumCost) {
+            c.upgradeOfficeSize(divisionName, cities[0], 15)
+            ns.print(`Upgrading office in ${cities[0]}`)
+        }
+        else if (buyAdvertCost < corp.funds && corp.funds > buyAdvertCost) {
+            
+            c.hireAdVert(divisionName);
+            ns.print(`hiring advert(${ns.formatNumber(buyAdvertCost)} < ${ns.formatNumber(growAveumCost)})`);
+        }
+        else if (citycosts[cheapestCityToUpgrade] < corp.funds && c.getOffice(divisionName, cheapestCityToUpgrade).size < c.getOffice(divisionName, cities[0]).size - 75) {
+            c.upgradeOfficeSize(divisionName, cheapestCityToUpgrade, 15)
+            ns.print(`upgrading office in ${cheapestCityToUpgrade}`)
+        }
+        else if (upgradeCosts[cheapestUpgrade] < corp.funds && c.getOffice(divisionName, cheapestCityToUpgrade).size > 60) {
+            c.levelUpgrade(cheapestUpgrade);
+            ns.print(`leveling upgrade ${cheapestUpgrade}`)
         }
 
-        async function checkProducts() {
-            let div = c.getDivision(tobaccoName);
-            let maxProds = getMaxProducts(tobaccoName);
-            let prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
-            let nextProd = Math.max(...prods.map(p => Number.parseInt(p.name.substring(tobaccoProductPrefix.length)))) + 1;
-            await discontinueWorstProductIfFull();
-            await createNewProductIfNotFull();
-            SellAllProducts();
+    }
 
-            function SellAllProducts() {
-                div = c.getDivision(tobaccoName);
-                prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
-                cities.forEach(city => {
-                    prods.forEach(p => {
-                        let product = c.getProduct(tobaccoName, city, p.name);
-                        if (product.desiredSellAmount == 0 || product.desiredSellPrice == 0) {
-                            c.sellProduct(tobaccoName, city, product.name, "MAX", "MP", false);
+    async function hirePeople(divisionName: string) {
+        while (c.hireEmployee(divisionName, cities[0])) { await ns.sleep(0) }
+        c.setAutoJobAssignment(divisionName, cities[0], jobs[0], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
+        c.setAutoJobAssignment(divisionName, cities[0], jobs[1], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
+        c.setAutoJobAssignment(divisionName, cities[0], jobs[2], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
+        c.setAutoJobAssignment(divisionName, cities[0], jobs[3], Math.ceil(c.getOffice(divisionName, cities[0]).size / 5))
+        c.setAutoJobAssignment(divisionName, cities[0], jobs[4], Math.ceil(c.getOffice(divisionName, cities[0]).size / 5))
 
-                        }
-                        if (c.hasResearched(tobaccoName, "Market-TA.II")) {
-                            c.setProductMarketTA2(tobaccoName, product.name, true);
-                        }
-                    });
+        for (const city of cities) {
+            if (city == cities[0]) continue;
+            const o = c.getOffice(divisionName, city);
+            while (c.hireEmployee(divisionName, city)) { await ns.sleep(0) }
+            jobs.map(j => c.setAutoJobAssignment(divisionName, city, j, 0));
+            const empch = Math.floor((3 / 15) * o.size)
+            const empcl = Math.floor((2 / 15) * o.size)
+            c.setAutoJobAssignment(divisionName, city, jobs[0], empch)
+            c.setAutoJobAssignment(divisionName, city, jobs[1], empch)
+            c.setAutoJobAssignment(divisionName, city, jobs[2], empcl)
+            c.setAutoJobAssignment(divisionName, city, jobs[3], empch)
+            c.setAutoJobAssignment(divisionName, city, jobs[4], o.size - (3 * empch + empcl))
+
+        }
+    }
+
+    async function checkProducts(divisionName: string, productPrefix: string) {
+        const div = c.getDivision(divisionName);
+        const maxProds = getMaxProducts(divisionName);
+        const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
+        const nextProd = Math.max(...prods.map(p =>  isNaN(Number.parseInt(p.name.substring(productPrefix.length))) ? 0 : Number.parseInt(p.name.substring(productPrefix.length)))) + 1;
+        await discontinueWorstProductIfFull();
+        await createNewProductIfNotFull();
+        SellAllProducts();
+
+        function SellAllProducts() {
+            const div = c.getDivision(divisionName);
+            const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
+            cities.forEach(city => {
+                prods.forEach(p => {
+                    const product = c.getProduct(divisionName, city, p.name);
+                    if (product.desiredSellAmount == 0 || product.desiredSellPrice == 0) {
+                        c.sellProduct(divisionName, city, product.name, "MAX", "MP", false);
+
+                    }
+                    if (c.hasResearched(divisionName, "Market-TA.II")) {
+                        c.setProductMarketTA2(divisionName, product.name, true);
+                    }
                 });
-            }
+            });
+        }
 
-            async function createNewProductIfNotFull() {
-                div = c.getDivision(tobaccoName);
-                prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
-                if (prods.length < maxProds && c.getCorporation().funds > 2 * 1e9) {
-                    ns.print(`Devloping new product: ${tobaccoProductPrefix + nextProd.toString()}`);
-                    c.makeProduct(tobaccoName, cities[0], tobaccoProductPrefix + nextProd.toString(), 1e9, 1e9);
+        async function createNewProductIfNotFull() {
+            const div = c.getDivision(divisionName);
+            const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
+            if (prods.length < maxProds && c.getCorporation().funds > 2 * 1e9) {
+                ns.print(`Devloping new product: ${productPrefix + nextProd.toString()}`);
+                c.makeProduct(divisionName, cities[0], productPrefix + nextProd.toString(), 1e9, 1e9);
+                await ns.sleep(10);
+            }
+        }
+
+        async function discontinueWorstProductIfFull() {
+            if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
+                stage[1] += 1;
+                if (stage[1] > 4) {
+                    const worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c);
+                    ns.print(`Discontinuing ${worst.name} (rating: ${ns.formatNumber(worst.effectiveRating)})`);
+                    c.discontinueProduct(divisionName, worst.name);
                     await ns.sleep(10);
+                    stage[1] = 0;
                 }
-            }
-
-            async function discontinueWorstProductIfFull() {
-                if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
-                    stage[1] += 1;
-                    if (stage[1] > 4) {
-                        let worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c);
-                        ns.print(`Discontinuing ${worst.name} (rating: ${worst.effectiveRating})`);
-                        c.discontinueProduct(tobaccoName, worst.name);
-                        await ns.sleep(10);
-                        stage[1] = 0;
-                    }
-                    else {
-                        ns.print("Products full, maturing");
-                    }
+                else {
+                    ns.print("Products full, maturing");
                 }
             }
         }
     }
+
     function getMaxProducts(division: string): number {
-        let div = c.getDivision(division);
+        const div = c.getDivision(division);
         let max = 0;
         max += div.makesProducts ? 3 : 0;
         max += c.hasResearched(division, "uPgrade: Capacity.I") ? 1 : 0
@@ -165,8 +172,8 @@ export async function main(ns: NS) {
     }
 }
 export async function teaParty(ns: NS) {
-    let c = ns.corporation
-    let corp = c.getCorporation();
+    const c = ns.corporation
+    const corp = c.getCorporation();
     for (const division of corp.divisions.map(d => c.getDivision(d))) {
         for (const city of division.cities) {
             const office = c.getOffice(division.name, city)

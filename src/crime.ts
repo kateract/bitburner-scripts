@@ -17,19 +17,21 @@ export async function main(ns: NS) {
     ns.disableLog("sleep")
     ns.clearLog();
     ns.tail();
-    while (true) {
+    let x = 1
+    while (x > 0) {
         ns.clearLog();
-        var time = 100
-        var crimes = Object.values(ns.enums.CrimeType)
-        var crimestats = crimes.map(crime => new CrimeStatsObj(ns, crime));
+        let time = 100
+        const crimes = Object.values(ns.enums.CrimeType)
+        const crimestats = crimes.map(crime => new CrimeStatsObj(ns, crime));
         crimestats.sort((prev, curr) => curr.expectedValue - prev.expectedValue)
         crimestats.map(crime => ns.print(`${crime.name} - ${ns.formatNumber(crime.expectedValue)}(${ns.formatPercent(crime.chance)})`))
-        var bestCrime = crimestats[0]
+        const bestCrime = crimestats[0]
         time = bestCrime.stats.time;
         if (!ns.singularity.isBusy() || ns.singularity.getCurrentWork().type != "CRIME" || ns.singularity.getCurrentWork().crimeType != bestCrime.name) {
             console.log(ns.singularity.getCurrentWork());
             time = ns.singularity.commitCrime(bestCrime.name, ns.singularity.isFocused())
         }
         await ns.sleep(time);
+        x += 1;
     }
 }

@@ -25,7 +25,7 @@ export async function main(ns: NS): Promise<void> {
   servers.forEach(server =>
     ns.print(ns.sprintf("%s - Level %d (%s)", server.hostname, Math.log2(server.maxRam) - 1, ns.formatRam(server.maxRam)))
   )
-  while (minimumServerLevel(servers) < levels.length - 1) {
+  while (minimumServerLevel(servers) < levels.length - 1 || servers.length < MaxServerCount) {
     //get upgrade/purchase costs per level
     const actionCosts = levels.map((m) =>
       Array.from({ length: MaxServerCount }, (_, i) =>
@@ -40,7 +40,7 @@ export async function main(ns: NS): Promise<void> {
       level = levels.length - 1;
     }
     else {
-      level = Math.max(firstUnaffordableLevel - 1, servers.length < MaxServerCount ? level : minimumServerLevel(servers) + 1, level);
+      level = Math.max(firstUnaffordableLevel - 1, servers.length < MaxServerCount ? level : minimumServerLevel(servers), level);
     }
     //console.debug(`server level ${level}, firstUnaffordable: ${firstUnaffordableLevel}, minimumServerLevel:${minimumServerLevel(servers)}`)
     //console.debug(servers);
