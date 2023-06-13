@@ -35,10 +35,10 @@ export async function main(ns: NS) {
         }
         await checkProducts(tobaccoName, tobaccoProductPrefix);
         await spendMoney(tobaccoName);
-        await hirePeople(tobaccoName);
+        await hirePeople(tobaccoName, "even");
         await checkProducts(restName, "Katdonalds#");
         await spendMoney(restName);
-        await hirePeople(restName);
+        await hirePeople(restName, "even");
         await teaParty(ns);
     }
 
@@ -70,7 +70,7 @@ export async function main(ns: NS) {
             ns.print(`Upgrading office in ${cities[0]}`)
         }
         else if (buyAdvertCost < corp.funds && corp.funds > buyAdvertCost) {
-            
+
             c.hireAdVert(divisionName);
             ns.print(`hiring advert(${ns.formatNumber(buyAdvertCost)} < ${ns.formatNumber(growAveumCost)})`);
         }
@@ -85,7 +85,7 @@ export async function main(ns: NS) {
 
     }
 
-    async function hirePeople(divisionName: string) {
+    async function hirePeople(divisionName: string, distribution: EmployeeDistributionNames) {
         while (c.hireEmployee(divisionName, cities[0])) { await ns.sleep(0) }
         c.setAutoJobAssignment(divisionName, cities[0], jobs[0], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
         c.setAutoJobAssignment(divisionName, cities[0], jobs[1], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
@@ -97,14 +97,15 @@ export async function main(ns: NS) {
             if (city == cities[0]) continue;
             const o = c.getOffice(divisionName, city);
             while (c.hireEmployee(divisionName, city)) { await ns.sleep(0) }
+            let x = Dist.get(distribution)
+            if(!x)
+            { return}
             jobs.map(j => c.setAutoJobAssignment(divisionName, city, j, 0));
-            const empch = Math.floor((3 / 15) * o.size)
-            const empcl = Math.floor((2 / 15) * o.size)
-            c.setAutoJobAssignment(divisionName, city, jobs[0], empch)
-            c.setAutoJobAssignment(divisionName, city, jobs[1], empch)
-            c.setAutoJobAssignment(divisionName, city, jobs[2], empcl)
-            c.setAutoJobAssignment(divisionName, city, jobs[3], empch)
-            c.setAutoJobAssignment(divisionName, city, jobs[4], o.size - (3 * empch + empcl))
+            
+            let dist = x(o.size);
+            for(let i = 0; i < 6; i++){
+                c.setAutoJobAssignment(divisionName, city, jobs[i], dist[i])
+            }
 
         }
     }
@@ -113,7 +114,7 @@ export async function main(ns: NS) {
         const div = c.getDivision(divisionName);
         const maxProds = getMaxProducts(divisionName);
         const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
-        const nextProd = Math.max(...prods.map(p =>  isNaN(Number.parseInt(p.name.substring(productPrefix.length))) ? 0 : Number.parseInt(p.name.substring(productPrefix.length)))) + 1;
+        const nextProd = Math.max(...prods.map(p => isNaN(Number.parseInt(p.name.substring(productPrefix.length))) ? 0 : Number.parseInt(p.name.substring(productPrefix.length)))) + 1;
         await discontinueWorstProductIfFull();
         await createNewProductIfNotFull();
         SellAllProducts();
@@ -188,4 +189,74 @@ export async function teaParty(ns: NS) {
         }
     }
 }
+
+export interface Distributor { (n: number): number[] }
+export type EmployeeDistributionNames ="starting"|"researchFocus"|"even"|"evenHalfResearch"|"feeder";
+export type EmployeeDistribution = {
+    description: EmployeeDistributionNames
+    distribute: Distributor;
+}
+function addRest(n: number, allocated: number[], index: number) : void {
+    allocated.forEach(r => r = Math.floor(r))
+    while(allocated.length < 6) {
+        allocated.push(0);
+    }
+    allocated[index] += n - allocated.reduce((p, c) => p + c, 0);
+}
+export const EmployeeDistributions: EmployeeDistribution[] =
+    [ 
+        {
+            description: "starting", 
+            distribute: (n: number) => {
+                const res = [n/3, n/3, n/3];
+                addRest(n, res, 4);
+                
+                return res;
+            }
+        },
+        {
+            description: "researchFocus",
+            distribute: (n: number) => {
+                let res= [0,0,0,0,0, 0];
+                if (n > 5) {
+                    res = [1, 1, 1, 1, 1, 0]
+                }
+                addRest(n, res, 4)
+                return res;
+            }
+        },
+        {
+            description: "even",
+            distribute: (n :number) => {
+                const res = [n/5,n/5, n/5, n/5, n/5, 0]
+                addRest(n, res, 4);
+                return res;
+            }
+        },
+        {
+            description: "evenHalfResearch",
+            distribute: (n:number) => {
+                const c = n/9
+                const res = [2*c, 2*c,2*c,2*c,c,0]
+                addRest(n, res, 4)
+                return res;
+            }
+        },
+        {
+            description: "feeder",
+            distribute: (n:number) => {
+                const c = (n-1)/4
+                const res = [c, c, 1, c, c]
+                addRest(n, res, 0)
+                return res;
+            }
+        }
+    ]
+
+    export const Dist = new Map<EmployeeDistributionNames, Distributor> 
+    EmployeeDistributions.forEach(d => Dist.set(d.description, d.distribute))
+    
+    
+
+
 

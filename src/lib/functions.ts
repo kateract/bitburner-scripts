@@ -172,3 +172,16 @@ export function batchPrepare (ns: NS, target: Server, threadLimit: number, batch
   return batch;
 
 }
+
+export function msToTime(duration: number) {
+  let milliseconds = Math.floor((duration % 1000) / 100),
+    seconds = Math.floor((duration / 1000) % 60),
+    minutes = Math.floor((duration / (1000 * 60)) % 60),
+    hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+
+  const shours = (hours < 10) ? "0" + hours : hours;
+  const sminutes = (minutes < 10) ? "0" + minutes : minutes;
+  const sseconds = (seconds < 10) ? "0" + seconds : seconds;
+
+  return `${shours}:${sminutes}:${sseconds}.${ milliseconds|3}`;
+}
