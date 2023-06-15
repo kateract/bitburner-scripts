@@ -24,7 +24,7 @@ export async function main(ns: NS) {
     if (!rdiv) return;
     const restName = rdiv.name;
     const levelUpgrades: CorpUpgradeName[] = ["Smart Factories", "Smart Storage", "DreamSense", "Wilson Analytics", "Nuoptimal Nootropic Injector Implants", "Speech Processor Implants", "Neural Accelerators", "FocusWires", "ABC SalesBots", "Project Insight"]
-
+    const prodStages = [0,0]
     while (stage[0] >= 0) {
         while (c.getCorporation().state == states[0]) {
             await ns.sleep(10);
@@ -33,10 +33,10 @@ export async function main(ns: NS) {
         while (c.getCorporation().state != states[0]) {
             await ns.sleep(10);
         }
-        await checkProducts(tobaccoName, tobaccoProductPrefix);
+        prodStages[0] = await checkProducts(ns, tobaccoName, tobaccoProductPrefix, prodStages[0]);
         await spendMoney(tobaccoName);
         await hirePeople(tobaccoName, "even");
-        await checkProducts(restName, "Katdonalds#");
+        prodStages[1] = await checkProducts(ns, restName, "Katdonalds#", prodStages[1]);
         await spendMoney(restName);
         await hirePeople(restName, "even");
         await teaParty(ns);
@@ -97,68 +97,69 @@ export async function main(ns: NS) {
             if (city == cities[0]) continue;
             const o = c.getOffice(divisionName, city);
             while (c.hireEmployee(divisionName, city)) { await ns.sleep(0) }
-            let x = Dist.get(distribution)
-            if(!x)
-            { return}
+            const x = Dist.get(distribution)
+            if (!x) { return }
             jobs.map(j => c.setAutoJobAssignment(divisionName, city, j, 0));
-            
-            let dist = x(o.size);
-            for(let i = 0; i < 6; i++){
+
+            const dist = x(o.size);
+            for (let i = 0; i < 6; i++) {
                 c.setAutoJobAssignment(divisionName, city, jobs[i], dist[i])
             }
 
         }
     }
-
-    async function checkProducts(divisionName: string, productPrefix: string) {
+}
+export async function checkProducts(ns: NS, divisionName: string, productPrefix: string, stage: number): Promise<number> {
+    const c = ns.corporation;
+    const CityName = ns.enums.CityName
+    const div = c.getDivision(divisionName);
+    const cities = [CityName.Aevum, CityName.Chongqing, CityName.NewTokyo, CityName.Ishima, CityName.Volhaven, CityName.Sector12];
+    const maxProds = getMaxProducts(divisionName);
+    const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
+    const nextProd = Math.max(...prods.map(p => isNaN(Number.parseInt(p.name.substring(productPrefix.length))) ? 0 : Number.parseInt(p.name.substring(productPrefix.length)))) + 1;
+    await discontinueWorstProductIfFull();
+    await createNewProductIfNotFull();
+    SellAllProducts();
+    return stage;
+    function SellAllProducts() {
         const div = c.getDivision(divisionName);
-        const maxProds = getMaxProducts(divisionName);
         const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
-        const nextProd = Math.max(...prods.map(p => isNaN(Number.parseInt(p.name.substring(productPrefix.length))) ? 0 : Number.parseInt(p.name.substring(productPrefix.length)))) + 1;
-        await discontinueWorstProductIfFull();
-        await createNewProductIfNotFull();
-        SellAllProducts();
+        cities.forEach(city => {
+            prods.forEach(p => {
+                const product = c.getProduct(divisionName, city, p.name);
+                if (product.desiredSellAmount == 0 || product.desiredSellPrice == 0) {
+                    c.sellProduct(divisionName, city, product.name, "MAX", "MP", false);
 
-        function SellAllProducts() {
-            const div = c.getDivision(divisionName);
-            const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
-            cities.forEach(city => {
-                prods.forEach(p => {
-                    const product = c.getProduct(divisionName, city, p.name);
-                    if (product.desiredSellAmount == 0 || product.desiredSellPrice == 0) {
-                        c.sellProduct(divisionName, city, product.name, "MAX", "MP", false);
-
-                    }
-                    if (c.hasResearched(divisionName, "Market-TA.II")) {
-                        c.setProductMarketTA2(divisionName, product.name, true);
-                    }
-                });
+                }
+                if (c.hasResearched(divisionName, "Market-TA.II")) {
+                    c.setProductMarketTA2(divisionName, product.name, true);
+                }
             });
-        }
+        });
+    }
 
-        async function createNewProductIfNotFull() {
-            const div = c.getDivision(divisionName);
-            const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
-            if (prods.length < maxProds && c.getCorporation().funds > 2 * 1e9) {
-                ns.print(`Devloping new product: ${productPrefix + nextProd.toString()}`);
-                c.makeProduct(divisionName, cities[0], productPrefix + nextProd.toString(), 1e9, 1e9);
+    async function createNewProductIfNotFull() {
+        const div = c.getDivision(divisionName);
+        const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
+        if (prods.length < maxProds && c.getCorporation().funds > 2 * 1e9) {
+            ns.print(`Devloping new product: ${productPrefix + nextProd.toString()}`);
+            c.makeProduct(divisionName, cities[0], productPrefix + nextProd.toString(), 1e9, 1e9);
+            await ns.sleep(10);
+        }
+    }
+
+    async function discontinueWorstProductIfFull() {
+        if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
+            stage += 1;
+            if (stage > 4) {
+                const worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c);
+                ns.print(`Discontinuing ${worst.name} (rating: ${ns.formatNumber(worst.effectiveRating)})`);
+                c.discontinueProduct(divisionName, worst.name);
                 await ns.sleep(10);
+                stage = 0;
             }
-        }
-
-        async function discontinueWorstProductIfFull() {
-            if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
-                stage[1] += 1;
-                if (stage[1] > 4) {
-                    const worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c);
-                    ns.print(`Discontinuing ${worst.name} (rating: ${ns.formatNumber(worst.effectiveRating)})`);
-                    c.discontinueProduct(divisionName, worst.name);
-                    await ns.sleep(10);
-                    stage[1] = 0;
-                }
-                else {
-                    ns.print("Products full, maturing");
-                }
+            else {
+                ns.print("Products full, maturing");
             }
         }
     }
@@ -172,6 +173,7 @@ export async function main(ns: NS) {
         return max;
     }
 }
+
 export async function teaParty(ns: NS) {
     const c = ns.corporation
     const corp = c.getCorporation();
@@ -191,33 +193,33 @@ export async function teaParty(ns: NS) {
 }
 
 export interface Distributor { (n: number): number[] }
-export type EmployeeDistributionNames ="starting"|"researchFocus"|"even"|"evenHalfResearch"|"feeder";
+export type EmployeeDistributionNames = "starting" | "researchFocus" | "even" | "evenHalfResearch" | "feeder";
 export type EmployeeDistribution = {
     description: EmployeeDistributionNames
     distribute: Distributor;
 }
-function addRest(n: number, allocated: number[], index: number) : void {
+function addRest(n: number, allocated: number[], index: number): void {
     allocated.forEach(r => r = Math.floor(r))
-    while(allocated.length < 6) {
+    while (allocated.length < 6) {
         allocated.push(0);
     }
     allocated[index] += n - allocated.reduce((p, c) => p + c, 0);
 }
 export const EmployeeDistributions: EmployeeDistribution[] =
-    [ 
+    [
         {
-            description: "starting", 
+            description: "starting",
             distribute: (n: number) => {
-                const res = [n/3, n/3, n/3];
+                const res = [n / 3, n / 3, n / 3];
                 addRest(n, res, 4);
-                
+
                 return res;
             }
         },
         {
             description: "researchFocus",
             distribute: (n: number) => {
-                let res= [0,0,0,0,0, 0];
+                let res = [0, 0, 0, 0, 0, 0];
                 if (n > 5) {
                     res = [1, 1, 1, 1, 1, 0]
                 }
@@ -227,25 +229,25 @@ export const EmployeeDistributions: EmployeeDistribution[] =
         },
         {
             description: "even",
-            distribute: (n :number) => {
-                const res = [n/5,n/5, n/5, n/5, n/5, 0]
+            distribute: (n: number) => {
+                const res = [n / 5, n / 5, n / 5, n / 5, n / 5, 0]
                 addRest(n, res, 4);
                 return res;
             }
         },
         {
             description: "evenHalfResearch",
-            distribute: (n:number) => {
-                const c = n/9
-                const res = [2*c, 2*c,2*c,2*c,c,0]
+            distribute: (n: number) => {
+                const c = n / 9
+                const res = [2 * c, 2 * c, 2 * c, 2 * c, c, 0]
                 addRest(n, res, 4)
                 return res;
             }
         },
         {
             description: "feeder",
-            distribute: (n:number) => {
-                const c = (n-1)/4
+            distribute: (n: number) => {
+                const c = (n - 1) / 4
                 const res = [c, c, 1, c, c]
                 addRest(n, res, 0)
                 return res;
@@ -253,10 +255,10 @@ export const EmployeeDistributions: EmployeeDistribution[] =
         }
     ]
 
-    export const Dist = new Map<EmployeeDistributionNames, Distributor> 
-    EmployeeDistributions.forEach(d => Dist.set(d.description, d.distribute))
-    
-    
+export const Dist = new Map<EmployeeDistributionNames, Distributor>()
+EmployeeDistributions.forEach(d => Dist.set(d.description, d.distribute))
+
+
 
 
 

@@ -40,7 +40,13 @@ export async function main(ns: NS): Promise<void> {
       level = levels.length - 1;
     }
     else {
-      level = Math.max(firstUnaffordableLevel - 1, servers.length < MaxServerCount ? level : minimumServerLevel(servers), level);
+      level = Math.max(firstUnaffordableLevel - 1, 
+        servers.length < MaxServerCount 
+          ? level 
+          : servers.every(s => s.maxRam == servers[0].maxRam) 
+            ? minimumServerLevel(servers) + 1 
+            : minimumServerLevel(servers)
+        , level);
     }
     //console.debug(`server level ${level}, firstUnaffordable: ${firstUnaffordableLevel}, minimumServerLevel:${minimumServerLevel(servers)}`)
     //console.debug(servers);

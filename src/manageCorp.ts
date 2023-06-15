@@ -1,4 +1,5 @@
-import { CorpEmployeePosition, NS } from '@ns'
+import { CorpEmployeePosition, CorpIndustryName, CorpMaterialName, NS } from '@ns'
+import { checkProducts } from './corp';
 
 export async function main(ns: NS) {
     ns.disableLog('sleep');
@@ -8,10 +9,14 @@ export async function main(ns: NS) {
 
     let companyName = "KatCorp";
     let agricultureName = "Katiculture";
-    let tobaccoName = "Katobacco";
-    let waterName = "Katwater";
+    const tobaccoName = "Katobacco";
+    const waterName = "Katwater";
+    const chemName = "Katchem"
     const tobaccoProductPrefix = "DeathSticksV";
-    let stage = [0, 0]
+    const restName = "Katdonalds"
+    const restPrefix = "Katdonalds#"
+    const stage = [0, 0]
+    const prefixes: Map<string, string> = new Map<string, string>([[tobaccoName, tobaccoProductPrefix], [restName, restPrefix]])
 
     const stages: CorpStage[] = [
         { description: "Initial Purchases", action: startUp, parameter: 0 },
@@ -27,7 +32,9 @@ export async function main(ns: NS) {
         { description: "Last Agriculture upgrades", action: lastAGUpgrades },
         { description: "Buying third production multiplier material batch", action: purchaseMaterials, parameter: 2 },
         { description: "Expand to Tobacco", action: expandToTobacco },
-        { description: "Spawn Corp Script", action: spawnCorp }
+        { description: "Expand to Chemicals", action: expandChemicals },
+        { description: "Expand to Restaurant", action: expandToRestaraunt },
+        { description: "Spawn Corp Script", action: spawnCorp },
     ]
 
     const CityName = ns.enums.CityName;
@@ -37,7 +44,7 @@ export async function main(ns: NS) {
     const cities = [CityName.Aevum, CityName.Chongqing, CityName.NewTokyo, CityName.Ishima, CityName.Volhaven, CityName.Sector12];
     const fundingTargets = [0, 210000000000, 5000000000000]
     const constants = c.getConstants();
-
+    const prodStages: number[] = [];
     const materialPhases = [
         [125, 0, 75, 27000],
         [2800, 96, 2520, 146400],
@@ -51,9 +58,9 @@ export async function main(ns: NS) {
     await startUp();
 
     //}
+    const prodStage = stages.findIndex(s => s.description == "Expand to Tobacco");
 
-
-    while (true) {
+    while (stage[0] >= 0) {
         while (c.getCorporation().state == states[0]) {
             if (!first[0]) {
                 first[0] = true;
@@ -68,14 +75,24 @@ export async function main(ns: NS) {
 
         await teaParty();
         await checkStage();
+        if (stage[0] >= prodStage) {
+            const prods = c.getCorporation().divisions.map(d => c.getDivision(d)).filter(d => d.makesProducts)
+            while (prodStages.length < prods.length) { prodStages.push(0) }
+            prods.forEach(async (product, i) => {
+                const prefix = prefixes.get(product.name)
+                if (prefix) {
+                    prodStages[i] = await checkProducts(ns, product.name, prefix, prodStages[i])
+                }
+            })
+        }
         first.fill(false);
     }
 
     //Buying tea and throwing parties to those offices that needs them
     async function teaParty() {
-        let corp = c.getCorporation();
+        const corp = c.getCorporation();
         for (const divisionName of corp.divisions) {
-            var division = c.getDivision(divisionName)
+            const division = c.getDivision(divisionName)
             for (const city of division.cities) {
                 const office = c.getOffice(division.name, city)
                 if (office.avgEnergy < 98) {
@@ -91,7 +108,7 @@ export async function main(ns: NS) {
     }
 
     type CorpStage = {
-        description: String;
+        description: string;
         action: (key: number) => Promise<void>;
         parameter?: number;
     }
@@ -109,13 +126,13 @@ export async function main(ns: NS) {
 
     async function startUp(_?: number) {
         if (!c.hasCorporation()) {
-            var created = ns.getResetInfo().currentNode == 3 ? c.createCorporation(companyName, false) : c.createCorporation(companyName, true)
+            const created = ns.getResetInfo().currentNode == 3 ? c.createCorporation(companyName, false) : c.createCorporation(companyName, true)
             if (!created) return;
         }
-        var corp = c.getCorporation();
+        const corp = c.getCorporation();
         companyName = corp.name;
-        var ag = corp.divisions?.map(d => c.getDivision(d)).find(f => f.type == "Agriculture")
-        var agdata = c.getIndustryData("Agriculture");
+        let ag = corp.divisions?.map(d => c.getDivision(d)).find(f => f.type == "Agriculture")
+        const agdata = c.getIndustryData("Agriculture");
         if (!ag && agdata.startingCost < c.getCorporation().funds) {
             c.expandIndustry("Agriculture", agricultureName)
 
@@ -129,18 +146,18 @@ export async function main(ns: NS) {
             }
             if (!c.hasUnlock("Smart Supply")) return;
 
-            for (let city of cities) {
+            for (const city of cities) {
 
                 if (!ag.cities.find(c => c == city) && constants.officeInitialCost < c.getCorporation().funds) {
                     c.expandCity(ag.name, city)
                 }
-                let office = c.getOffice(agricultureName, city);
+                const office = c.getOffice(agricultureName, city);
                 if (!office) return;
                 if (!c.hasWarehouse(agricultureName, city) && c.getCorporation().funds > constants.warehouseInitialCost) {
                     c.purchaseWarehouse(agricultureName, city);
                 }
                 c.setSmartSupply(agricultureName, city, true)
-                while (office.numEmployees < 3 && c.hireEmployee(agricultureName, city)) { }
+                while (office.numEmployees < 3 && c.hireEmployee(agricultureName, city)) { await ns.sleep(0) }
                 for (let i = 0; i < 3; i++) {
                     if (office.employeeJobs[jobs[i]] < 1)
                         c.setAutoJobAssignment(agricultureName, city, jobs[i], 1);
@@ -155,15 +172,15 @@ export async function main(ns: NS) {
                         c.levelUpgrade(levelUpgrades[index]);
                 }
             }
-            c.hireAdVert(agricultureName);
+            if (c.getHireAdVertCount(agricultureName) == 0) c.hireAdVert(agricultureName);
             stage[0] += 1
             stage[1] = 0
         }
     }
 
     async function waitForTheLazyFucksToGetTheirShitTogether(key?: number) {
-        let avgs = [0, 0];
-        for (let city of cities) {
+        const avgs = [0, 0];
+        for (const city of cities) {
             avgs[0] += c.getOffice(agricultureName, city).avgMorale
             avgs[1] += c.getOffice(agricultureName, city).avgEnergy
         }
@@ -179,78 +196,118 @@ export async function main(ns: NS) {
 
 
     async function purchaseMaterials(phase: number) {
-
-        for (let city of cities) {
+        let complete = 0;
+        for (const city of cities) {
             for (let i = 0; i < 4; i++) {
-                let m = c.getMaterial(agricultureName, city, boostMaterials[i]);
-                if (m.stored < materialPhases[phase][i]) {
+                const m = c.getMaterial(agricultureName, city, boostMaterials[i]);
+                if (m.stored < materialPhases[phase][i] && c.getCorporation().funds > (materialPhases[phase][i] - m.stored) * m.marketPrice) {
                     ns.print(`Buying ${materialPhases[phase][i] - m.stored} ${boostMaterials[i]} for ${city}`);
                     c.bulkPurchase(agricultureName, city, boostMaterials[i], Math.max(materialPhases[phase][i] - m.stored, 0));
                 }
+                else if (m.stored >= materialPhases[phase][i]) {
+                    complete += 1
+                }
             }
         }
-        stage[0] += 1;
-        stage[1] = 0;
+        if (complete >= cities.length * 4) {
+            stage[0] += 1;
+            stage[1] = 0;
+        }
+        else {
+            stage[1] += 1;
+        }
     }
 
     async function expandSpringWater(key?: number) {
+        await expandMaterialDivision("Spring Water", waterName, [{ division: agricultureName, material: "Water" }])
+    }
+
+    async function expandChemicals(key?: number) {
+        await expandMaterialDivision("Chemical", chemName, [{ division: agricultureName, material: "Chemicals" }])
+        await addExport(agricultureName, { division: chemName, material: "Plants" })
+        await addExport(chemName, { division: agricultureName, material: "Chemicals" })
+    }
+
+    async function addExport(fromDivision: string, material: ExportMaterial) {
+        cities.forEach(city => {
+            if (!c.getMaterial(fromDivision, city, material.material).exports.find(x => x.city == city && x.division == material.division)) {
+                c.exportMaterial(fromDivision, city, material.division, city, material.material, "-IPROD");
+            }
+        })
+    }
+
+    type ExportMaterial = { material: CorpMaterialName, division: string }
+
+    async function expandMaterialDivision(divType: CorpIndustryName, divisionName: string, exportMaterials: ExportMaterial[]) {
 
         if (!c.hasUnlock("Export") && c.getUnlockCost("Export") < c.getCorporation().funds) {
             c.purchaseUnlock("Export")
         }
         let corp = c.getCorporation();
-        let sw = corp.divisions?.map(d => c.getDivision(d)).find(f => f.type == "Spring Water")
-        var swdata = c.getIndustryData("Spring Water");
-        if (!sw && swdata.startingCost < c.getCorporation().funds) {
-            c.expandIndustry("Spring Water", waterName)
+        let div = corp.divisions?.map(d => c.getDivision(d)).find(f => f.type == divType)
+        const industryData = c.getIndustryData(divType);
+        if (!div && industryData.startingCost < c.getCorporation().funds) {
+            c.expandIndustry(divType, divisionName)
 
-            sw = c.getDivision(waterName);
+            div = c.getDivision(divisionName);
         }
-        if (!sw) return;
-        for (let city of cities) {
+        if (div) {
+            for (const city of cities) {
 
-            if (!sw.cities.find(c => c == city) && constants.officeInitialCost < c.getCorporation().funds) {
-                c.expandCity(sw.name, city)
-            }
-            if (!c.getDivision(waterName).cities.includes(city)) continue;
-            let office = c.getOffice(waterName, city);
-            if (!office) continue;
-            if (!c.hasWarehouse(waterName, city) && c.getCorporation().funds > constants.warehouseInitialCost) {
-                c.purchaseWarehouse(waterName, city);
-            }
-
-            while (office.numEmployees < 3 && c.hireEmployee(waterName, city)) { }
-            for (let i = 0; i < 3; i++) {
-                if (office.employeeJobs[jobs[i]] < 1)
-                    c.setAutoJobAssignment(waterName, city, jobs[i], 1);
-            }
-            if (c.hasWarehouse(waterName, city)) {
-                c.setSmartSupply(waterName, city, true)
-                c.sellMaterial(waterName, city, "Water", "MAX", "MP")
-
-                while (c.getWarehouse(waterName, city).level < 3 && c.getUpgradeWarehouseCost(waterName, city) < c.getCorporation().funds) {
-                    c.upgradeWarehouse(waterName, city);
+                if (!div.cities.find(c => c == city) && constants.officeInitialCost < c.getCorporation().funds) {
+                    c.expandCity(div.name, city)
+                }
+                if (!c.getDivision(divisionName).cities.includes(city)) continue;
+                const office = c.getOffice(divisionName, city);
+                if (!office) continue;
+                if (!c.hasWarehouse(divisionName, city) && c.getCorporation().funds > constants.warehouseInitialCost) {
+                    c.purchaseWarehouse(divisionName, city);
                 }
 
-                if (c.hasUnlock("Export") && c.getMaterial(waterName, city, "Water").exports.length == 0) {
-                    c.exportMaterial(waterName, city, agricultureName, city, "Water", "-1  * IPROD");
+                while (office.numEmployees < 3 && c.hireEmployee(divisionName, city)) { await ns.sleep(0) }
+                for (let i = 0; i < 3; i++) {
+                    if (office.employeeJobs[jobs[i]] < 1)
+                        c.setAutoJobAssignment(divisionName, city, jobs[i], 1);
+                }
+                if (c.hasWarehouse(divisionName, city)) {
+                    c.setSmartSupply(divisionName, city, true)
+                    exportMaterials.forEach(m => {
+                        c.sellMaterial(divisionName, city, m.material, "MAX", "MP")
+                    });
+                    while (c.getWarehouse(divisionName, city).level < 3 && c.getUpgradeWarehouseCost(divisionName, city) < c.getCorporation().funds) {
+                        c.upgradeWarehouse(divisionName, city);
+                    }
+
+                    if (c.hasUnlock("Export")) {
+                        exportMaterials.forEach(m => {
+                            if (!c.getMaterial(m.division, city, m.material).exports.find(s => s.city == city && s.division == m.division)) {
+                                c.exportMaterial(divisionName, city, m.division, city, m.material, "-IPROD");
+                            }
+                        })
+                    }
                 }
             }
         }
         corp = c.getCorporation()
-        sw = c.getDivision(waterName);
-        console.log(sw);
-        if (cities.every(city => sw?.cities.includes(city)) && cities.every(city => c.hasWarehouse(waterName, city)) && cities.map(city => c.getWarehouse(waterName, city).level).every(wlevel => wlevel >= 3) && sw) {
-            stage[0] += 1;
-            stage[1] = 0;
-        } else {
-            stage[1] += 1;
+        if (corp.divisions.find(d => d == divisionName) && c.hasUnlock("Export")) {
+            div = c.getDivision(divisionName);
+            console.log(div);
+
+            if (cities.every(city => div?.cities.includes(city)) && cities.every(city => c.hasWarehouse(divisionName, city)) && cities.map(city => c.getWarehouse(divisionName, city).level).every(wlevel => wlevel >= 3) && div) {
+                stage[0] += 1;
+                stage[1] = 0;
+                return
+            }
         }
+        stage[1] += 1;
+
+
+
     }
 
     async function invest(i: number) {
-        let corp = c.getCorporation();
-        let ratio = Math.round(100 * corp.numShares / corp.totalShares)
+        const corp = c.getCorporation();
+        const ratio = Math.round(100 * corp.numShares / corp.totalShares)
         ns.print(`Ratio: ${ratio}`);
         if ((ratio < 100 && i == 1) || (ratio < 90 && i == 2) || (ratio < 55 && i == 3) || (ratio < 70 && i == 4)) {
             ns.print(`Funding round ${i} already complete, skipping.`)
@@ -296,10 +353,10 @@ export async function main(ns: NS) {
         complete = c.getUpgradeLevel(levelUpgrades[1]) == 10 ? 1 : 0;
 
         for (let i = 0; i < 2; i++) {
-            for (let city of cities) {
+            for (const city of cities) {
                 if (c.getOffice(agricultureName, city).size < 9 && c.getOfficeSizeUpgradeCost(agricultureName, city, 3) < c.getCorporation().funds) {
                     c.upgradeOfficeSize(agricultureName, city, 3);
-                    while (c.hireEmployee(agricultureName, city)) { };
+                    while (c.hireEmployee(agricultureName, city)) { await ns.sleep(0) }
                     if (c.getOffice(agricultureName, city).size >= 9) {
                         c.setAutoJobAssignment(agricultureName, city, jobs[0], 1)
                         c.setAutoJobAssignment(agricultureName, city, jobs[1], 1)
@@ -313,7 +370,7 @@ export async function main(ns: NS) {
         }
 
         for (let i = 0; i < 7; i++) {
-            for (let city of cities) {
+            for (const city of cities) {
                 while (c.getWarehouse(agricultureName, city).level < 10) {
                     if (c.getUpgradeWarehouseCost(agricultureName, city, 1) < c.getCorporation().funds)
                         c.upgradeWarehouse(agricultureName, city, 1);
@@ -321,7 +378,7 @@ export async function main(ns: NS) {
                 complete += c.getWarehouse(agricultureName, city).level == 10 ? 1 : 0;
             }
         }
-        if (complete = 14) {
+        if (complete == 14) {
             stage[0] += 1;
             stage[1] = 0;
         }
@@ -329,9 +386,10 @@ export async function main(ns: NS) {
 
     async function lastAGUpgrades(key?: number) {
         let complete = 0;
-        for (let city of cities) {
+        for (const city of cities) {
             for (let i = c.getWarehouse(agricultureName, city).level; i < 19; i++) {
-                try { c.upgradeWarehouse(agricultureName, city, 1); } catch { }
+                if (c.getCorporation().funds > c.getUpgradeWarehouseCost(agricultureName, city))
+                    c.upgradeWarehouse(agricultureName, city)
             }
             if (c.getWarehouse(agricultureName, city).level >= 19) {
                 ns.print(`${city} warehouse for ${agricultureName} at level ${c.getWarehouse(agricultureName, city).level}`)
@@ -345,7 +403,7 @@ export async function main(ns: NS) {
     }
 
     async function reAssignEmployees(key?: number) {
-        for (let city of cities) {
+        for (const city of cities) {
             jobs.map(j => c.setAutoJobAssignment(agricultureName, city, j, 0));
             c.setAutoJobAssignment(agricultureName, city, jobs[0], 3)
             c.setAutoJobAssignment(agricultureName, city, jobs[1], 2)
@@ -357,65 +415,73 @@ export async function main(ns: NS) {
     }
 
     async function expandToTobacco() {
-        let corp = c.getCorporation();
-        let divisions = corp.divisions.map(d => c.getDivision(d))
+        await expandProductDivision("Tobacco", tobaccoName, tobaccoProductPrefix)
+    }
 
-        if (!divisions.find(d => d.type == "Tobacco")) {
-            try { c.expandIndustry("Tobacco", tobaccoName); } catch { ns.tprint("Couldn't expand.. no money"); ns.exit(); }
+    async function expandToRestaraunt() {
+        await expandProductDivision("Restaurant", restName, restPrefix)
+    }
+
+    async function expandProductDivision(divisionType: CorpIndustryName, divisionName: string, productPrefix: string) {
+        const corp = c.getCorporation();
+        const divisions = corp.divisions.map(d => c.getDivision(d))
+
+        if (!divisions.find(d => d.type == divisionType)) {
+            try { c.expandIndustry(divisionType, divisionName); } catch { ns.tprint("Couldn't expand.. no money"); ns.exit(); }
         }
-        let div = divisions.find(d => d.type == "Tobacco");
+        const div = divisions.find(d => d.type == divisionType);
         if (!div) return;
-        tobaccoName = div.name;
+        divisionName = div.name;
         if (!div.cities.find(c => c == cities[0])) {
-            c.expandCity(tobaccoName, cities[0]);
+            c.expandCity(divisionName, cities[0]);
         }
-        if (!c.hasWarehouse(tobaccoName, cities[0])) {
-            c.purchaseWarehouse(tobaccoName, cities[0]);
+        if (!c.hasWarehouse(divisionName, cities[0])) {
+            c.purchaseWarehouse(divisionName, cities[0]);
         }
         try {
-            let o = c.getOffice(tobaccoName, cities[0]);
+            const o = c.getOffice(divisionName, cities[0]);
             for (let i = o.size / 3; i < 10; i++) {
-                c.upgradeOfficeSize(tobaccoName, cities[0], 3);
+                c.upgradeOfficeSize(divisionName, cities[0], 3);
             }
-            while (c.hireEmployee(tobaccoName, cities[0])) { }
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[0], Math.floor(c.getOffice(tobaccoName, cities[0]).size / 5))
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[1], Math.floor(c.getOffice(tobaccoName, cities[0]).size / 5))
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[2], Math.floor(c.getOffice(tobaccoName, cities[0]).size / 5))
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[3], Math.ceil(c.getOffice(tobaccoName, cities[0]).size / 5))
-            c.setAutoJobAssignment(tobaccoName, cities[0], jobs[4], Math.ceil(c.getOffice(tobaccoName, cities[0]).size / 5))
-        } catch { }
+            while (c.hireEmployee(divisionName, cities[0])) { await ns.sleep(0) }
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[0], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[1], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[2], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[3], Math.ceil(c.getOffice(divisionName, cities[0]).size / 5))
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[4], Math.ceil(c.getOffice(divisionName, cities[0]).size / 5))
+        } catch { ns.print("error assigning jobs") }
 
         //ns.print('check cities')
-        for (let city of cities) {
+        for (const city of cities) {
             if (city == cities[0]) continue;
             try {
                 if (!div.cities.find(c => c == city)) {
-                    ns.print(`Expanding ${tobaccoName} to ${city}`)
-                    c.expandCity(tobaccoName, city);
+                    ns.print(`Expanding ${divisionName} to ${city}`)
+                    c.expandCity(divisionName, city);
                 }
 
 
-                if (!c.hasWarehouse(tobaccoName, city))
-                    c.purchaseWarehouse(tobaccoName, city);
-            } catch { }
-            let o = c.getOffice(tobaccoName, city);
+                if (!c.hasWarehouse(divisionName, city))
+                    c.purchaseWarehouse(divisionName, city);
+            } catch { ns.print("error 401") }
+            const o = c.getOffice(divisionName, city);
             for (let i = o.size / 3; i < 3; i++) {
-                c.upgradeOfficeSize(tobaccoName, city, 3);
+                c.upgradeOfficeSize(divisionName, city, 3);
             }
-            while (c.hireEmployee(tobaccoName, city)) { }
-            jobs.map(j => c.setAutoJobAssignment(tobaccoName, city, j, 0));
-            let empch = Math.floor((3 / 15) * o.size)
-            let empcl = Math.floor((2 / 15) * o.size)
-            c.setAutoJobAssignment(tobaccoName, city, jobs[0], empch)
-            c.setAutoJobAssignment(tobaccoName, city, jobs[1], empch)
-            c.setAutoJobAssignment(tobaccoName, city, jobs[2], empcl)
-            c.setAutoJobAssignment(tobaccoName, city, jobs[3], empch)
-            c.setAutoJobAssignment(tobaccoName, city, jobs[4], o.size - (3 * empch + empcl))
+            while (c.hireEmployee(divisionName, city)) { ns.print("error 406") }
+            jobs.map(j => c.setAutoJobAssignment(divisionName, city, j, 0));
+            const empch = Math.floor((3 / 15) * o.size)
+            const empcl = Math.floor((2 / 15) * o.size)
+            c.setAutoJobAssignment(divisionName, city, jobs[0], empch)
+            c.setAutoJobAssignment(divisionName, city, jobs[1], empch)
+            c.setAutoJobAssignment(divisionName, city, jobs[2], empcl)
+            c.setAutoJobAssignment(divisionName, city, jobs[3], empch)
+            c.setAutoJobAssignment(divisionName, city, jobs[4], o.size - (3 * empch + empcl))
 
         }
         //ns.print('check products')
-        if (c.getDivision(tobaccoName).products.length == 0) {
-            c.makeProduct(tobaccoName, cities[0], tobaccoProductPrefix + "1", 1e9, 1e9);
+        if (c.getDivision(divisionName).products.length == 0) {
+            c.makeProduct(divisionName, cities[0], productPrefix + "1", 1e9, 1e9);
         }
         //ns.print(`checking for ${levelUpgrades[6]} upgrades`);
         while (c.getCorporation().funds > c.getUpgradeLevelCost(levelUpgrades[6])) {
@@ -427,7 +493,7 @@ export async function main(ns: NS) {
             for (let i = c.getUpgradeLevel("DreamSense"); i < 10; i++) {
                 c.levelUpgrade("DreamSense");
             }
-        } catch { }
+        } catch { ns.print("error 431") }
         //ns.print('check other upgrades')
         try {
             for (let i = 2; i < 6; i++) {
@@ -435,60 +501,60 @@ export async function main(ns: NS) {
                     c.levelUpgrade(levelUpgrades[i]);
                 }
             }
-        } catch { }
+        } catch { ns.print("error 439") }
         //ns.print(`check Project Insight`)
         try {
             for (let i = c.getUpgradeLevel("Project Insight"); i < 10; i++) {
                 c.levelUpgrade("Project Insight");
             }
-        } catch { }
+        } catch { ns.print("error 445") }
         //ns.print('check products') 
-        div = c.getDivision(tobaccoName);
-        let maxProds = getMaxProducts(tobaccoName);
-        let prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
-        let nextProd = Math.max(...prods.map(p => Number.parseInt(p.name.substring(tobaccoProductPrefix.length)))) + 1;
-        //ns.print(`${prods.filter(p => p.developmentProgress < 100).length} products in development`);
-        if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
-            stage[1] += 1
-            if (stage[1] > 4) {
-                let worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c)
-                ns.print(`Discontinuing ${worst.name} (rating: ${worst.effectiveRating})`)
-                c.discontinueProduct(tobaccoName, worst.name);
-                await ns.sleep(10);
-                stage[1] = 0
-            }
-            else {
-                ns.print("Products full, maturing");
-            }
-        }
-        div = c.getDivision(tobaccoName);
-        prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
-        if (prods.length < maxProds && c.getCorporation().funds > 2 * 1e9) {
-            ns.print(`Devloping new product: ${tobaccoProductPrefix + nextProd.toString()}`)
-            c.makeProduct(tobaccoName, cities[0], tobaccoProductPrefix + nextProd.toString(), 1e9, 1e9)
-            await ns.sleep(10);
-        }
-        div = c.getDivision(tobaccoName);
-        prods = div.products.map(p => c.getProduct(tobaccoName, cities[0], p));
-        cities.forEach(city => {
-            prods.forEach(p => {
-                let product = c.getProduct(tobaccoName, city, p.name)
-                if (product.desiredSellAmount == 0 || product.desiredSellPrice == 0) {
-                    c.sellProduct(tobaccoName, city, product.name, "MAX", "MP", false);
+        // div = c.getDivision(divisionName);
+        // const maxProds = getMaxProducts(divisionName);
+        // let prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
+        // const nextProd = Math.max(...prods.map(p => Number.parseInt(p.name.substring(productPrefix.length)))) + 1;
+        // //ns.print(`${prods.filter(p => p.developmentProgress < 100).length} products in development`);
+        // if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
+        //     stage[1] += 1
+        //     if (stage[1] > 4) {
+        //         const worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c)
+        //         ns.print(`Discontinuing ${worst.name} (rating: ${worst.effectiveRating})`)
+        //         c.discontinueProduct(divisionName, worst.name);
+        //         await ns.sleep(10);
+        //         stage[1] = 0
+        //     }
+        //     else {
+        //         ns.print("Products full, maturing");
+        //     }
+        // }
+        // div = c.getDivision(divisionName);
+        // prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
+        // if (prods.length < maxProds && c.getCorporation().funds > 2 * 1e9) {
+        //     ns.print(`Devloping new product: ${productPrefix + nextProd.toString()}`)
+        //     c.makeProduct(divisionName, cities[0], productPrefix + nextProd.toString(), 1e9, 1e9)
+        //     await ns.sleep(10);
+        // }
+        // div = c.getDivision(divisionName);
+        // prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
+        // cities.forEach(city => {
+        //     prods.forEach(p => {
+        //         const product = c.getProduct(divisionName, city, p.name)
+        //         if (product.desiredSellAmount == 0 || product.desiredSellPrice == 0) {
+        //             c.sellProduct(divisionName, city, product.name, "MAX", "MP", false);
 
-                }
-                if (c.hasResearched(tobaccoName, "Market-TA.II")) {
-                    c.setProductMarketTA2(tobaccoName, product.name, true);
-                }
-            })
-        });
+        //         }
+        //         if (c.hasResearched(divisionName, "Market-TA.II")) {
+        //             c.setProductMarketTA2(divisionName, product.name, true);
+        //         }
+        //     })
+        // });
 
         if (
             c.getUpgradeLevel("Project Insight") >= 10 &&
             levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr) >= 20 &&
             c.getUpgradeLevel("DreamSense") >= 10 &&
-            c.getOffice(tobaccoName, cities[0]).size >= 30 &&
-            c.getDivision(tobaccoName).cities.length == 6
+            c.getOffice(divisionName, cities[0]).size >= 30 &&
+            c.getDivision(divisionName).cities.length == 6
         ) {
             stage[0] += 1;
             stage[1] = 0;
@@ -498,8 +564,8 @@ export async function main(ns: NS) {
                 levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr) >= 20,
                 levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)),
                 c.getUpgradeLevel("DreamSense") >= 10,
-                c.getOffice(tobaccoName, cities[0]).size >= 30,
-                c.getDivision(tobaccoName).cities.length == 6
+                c.getOffice(divisionName, cities[0]).size >= 30,
+                c.getDivision(divisionName).cities.length == 6
             )
             stage[1] += 1;
         }
@@ -514,7 +580,7 @@ export async function main(ns: NS) {
     }
 
     function getMaxProducts(division: string): number {
-        let div = c.getDivision(division);
+        const div = c.getDivision(division);
         let max = 0;
         max += div.makesProducts ? 3 : 0;
         max += c.hasResearched(division, "uPgrade: Capacity.I") ? 1 : 0

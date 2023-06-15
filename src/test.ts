@@ -2,17 +2,18 @@ import { NS } from '@ns'
 import { batchHWGW } from 'lib/functions';
 import { getRatiosSummary, maximize } from '/ratios';
 import { getAugmentList } from './grafting';
+import { getFactionRepNeeded } from './lib/augments';
 // import { Port } from '/ports';
 // import { getRatiosSummary, maximize } from '/ratios'
 
 export async function main(ns: NS): Promise<void> {
   ns.clearLog();
   ns.tail();
-
-  const augs = getAugmentList(ns);
-  augs.forEach(a => {
-    ns.tprint(`${a} - ${ns.formatNumber(ns.grafting.getAugmentationGraftPrice(a))} - ${ns.formatNumber(ns.grafting.getAugmentationGraftTime(a))}`);
-  })
+  getFactionRepNeeded(ns).forEach((v, k) => ns.tprint(`${k}: ${ns.formatNumber(v, 0, 1000, true)}`))
+  // const augs = getAugmentList(ns);
+  // augs.forEach(a => {
+  //   ns.tprint(`${a} - ${ns.formatNumber(ns.grafting.getAugmentationGraftPrice(a))} - ${ns.formatNumber(ns.grafting.getAugmentationGraftTime(a))}`);
+  // })
   // const mults = ns.getBitNodeMultipliers();
   // ns.print(mults);
   //const log = ns.getPortHandle(Port.DISPATCH_LOG);

@@ -13,6 +13,7 @@ export async function main(ns: NS): Promise<void> {
   let hackThreads = isNaN(ns.args[2] as number) ? 0 : ns.args[2] as number;
   const messages: string[] = [];
 
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     const pids: number[] = getHackProcs(ns, host, target)
     let waiting = pids.length > 0
