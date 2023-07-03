@@ -4,8 +4,14 @@ export async function main(ns: NS): Promise<void> {
   ns.tail();
   ns.disableLog("ALL");
   ns.clearLog();
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     const nodes = getNodeStats(ns);
+    if (nodes.length == 0){
+      ns.print("Buying First Hacknet Node")
+      ns.hacknet.purchaseNode();
+      continue;
+    }
     const action = getCheapestUpgrade(ns, nodes);
     ns.print(action.getString(ns));
     if (action.action == HacknetActions.NONE) {

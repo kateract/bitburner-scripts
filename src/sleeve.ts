@@ -1,4 +1,4 @@
-import { CrimeStats, CrimeType, GymType, NS, SleevePerson, SleeveCrimeTask, SleeveFactionTask, FactionWorkType, WorkStats } from '@ns';
+import { CrimeStats, CrimeType, GymType, NS, SleevePerson, SleeveCrimeTask, SleeveFactionTask, FactionWorkType, WorkStats, Sleeve } from '@ns';
 import { getFactionRepNeeded } from './lib/augments';
 export class SleeveCrimeStatsObj {
     /**
@@ -45,6 +45,8 @@ export async function main(ns: NS) {
             const gangFaction = ns.gang.getGangInformation().faction
             factions = factions.filter(f => f != gangFaction);
         }
+        const sleeveFactionTasks = getSleeveTasks(s, factions);
+
         for (let i = 0; i < sleeveCount; i++) {
             const sleeve = s.getSleeve(i);
             let skills = [sleeve.skills.agility, sleeve.skills.dexterity, sleeve.skills.strength, sleeve.skills.defense, sleeve.skills.hacking, sleeve.skills.charisma]
@@ -58,24 +60,12 @@ export async function main(ns: NS) {
                     s.setToSynchronize(i);
             }
             else if (skills.reduce((p, c) => p < c ? p : c) >= 69) {
-                if (i < factions.length) {
-                    const works = Object.values(ns.enums.FactionWorkType)
-                    const workstats = works.map(work => new SleeveFactionWorkStatsObj(ns, work, sleeve, ns.singularity.getFactionFavor(factions[i])))
-                    workstats.sort((prev, cur) => cur.stats.reputation - prev.stats.reputation)
-                    ns.print(workstats);
-                    console.log(workstats);
-                    if (s.getTask(i)?.type != "FACTION" || (s.getTask(i) as SleeveFactionTask).factionWorkType != workstats[0].name) {
-                        s.setToFactionWork(i, factions[i], workstats[0].name)
-                    }
+                const task = sleeveFactionTasks.find(t => t.i == i)
+                if (task) {
+                    doBestWorkForFaction(ns, i, task.t.factionName);
                 }
                 else {
-                    const crimes = Object.values(ns.enums.CrimeType)
-                    const crimestats = crimes.map(crime => new SleeveCrimeStatsObj(ns, crime, sleeve))
-                    crimestats.sort((prev, curr) => curr.expectedValue - prev.expectedValue)
-                    const bestCrime = crimestats[0];
-                    if (s.getTask(i)?.type != "CRIME" || (s.getTask(i) as SleeveCrimeTask).crimeType != bestCrime.name) {
-                        s.setToCommitCrime(i, bestCrime.name);
-                    }
+                    doBestCrime(ns, sleeve, i);
                 }
             }
             else {
@@ -107,5 +97,59 @@ export async function main(ns: NS) {
         }
         await ns.sleep(10000);
 
+    }
+}
+
+function getSleeveTasks(s: Sleeve, factions: string[]) {
+    const sleeveFactionTasks = Array(s.getNumSleeves()).fill(0).map((z, i) => ({ i: i, t: s.getTask(i) })).filter(t => t?.t?.type == "FACTION").map(t => ({ i: t.i, t: (t.t as SleeveFactionTask) }));
+    sleeveFactionTasks.forEach((t) => {
+        if (factions.includes(t.t.factionName)) {
+            factions.splice(factions.indexOf(t.t.factionName), 1);
+        }
+    });
+    for (let i = 0; i < s.getNumSleeves(); i++) {
+        const task = sleeveFactionTasks.find(f => f.i == i);
+        if (task) {
+            continue;
+        }
+        else {
+            if (factions.length > 0) {
+                sleeveFactionTasks.push({ i: i, t: { factionName: factions[0], type: 'FACTION', factionWorkType: "hacking" } });
+                factions.shift();
+            }
+        }
+    }
+    return sleeveFactionTasks;
+}
+
+function doBestCrime(ns: NS, sleeve: SleevePerson, i: number) {
+    const s = ns.sleeve;
+    const crimes = Object.values(ns.enums.CrimeType);
+    const crimestats = crimes.map(crime => new SleeveCrimeStatsObj(ns, crime, sleeve));
+    crimestats.sort((prev, curr) => curr.expectedValue - prev.expectedValue);
+    const bestCrime = crimestats[0];
+    if (s.getTask(i)?.type != "CRIME" || (s.getTask(i) as SleeveCrimeTask).crimeType != bestCrime.name) {
+        s.setToCommitCrime(i, bestCrime.name);
+    }
+}
+
+function doBestWorkForFaction(ns: NS, i: number, faction: string,) {
+    const works = Object.values(ns.enums.FactionWorkType);
+    const s = ns.sleeve;
+    const sleevePerson = s.getSleeve(i)
+    const workstats = works.map(work => new SleeveFactionWorkStatsObj(ns, work, sleevePerson, ns.singularity.getFactionFavor(faction)));
+    workstats.sort((prev, cur) => cur.stats.reputation - prev.stats.reputation);
+    if (s.getTask(i)?.type != "FACTION" || (s.getTask(i) as SleeveFactionTask).factionWorkType != workstats[0].name || (s.getTask(i) as SleeveFactionTask).factionName != faction) {
+        let nWork = 0;
+        while (nWork < workstats.length && !s.setToFactionWork(i, faction, workstats[nWork].name)) {
+            nWork += 1;
+        }
+        if (nWork < workstats.length) {
+            ns.print(`set task ${workstats[0].name} for ${faction} on sleeve ${i}`);
+        }
+        else ns.print(`failed to set task ${workstats[0].name} for ${faction} on sleeve ${i}`);
+    } else {
+        ns.print(`can't start task ${workstats[0].name} for ${faction} on sleeve ${i}`);
+        ns.print(s.getTask(i));
     }
 }

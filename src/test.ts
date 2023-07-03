@@ -1,48 +1,37 @@
-import { NS } from '@ns'
+import { NS, SleeveFactionTask } from '@ns'
 import { batchHWGW } from 'lib/functions';
 import { getRatiosSummary, maximize } from '/ratios';
-import { getAugmentList } from './grafting';
+//import { getAugmentList } from './grafting';
 import { getFactionRepNeeded } from './lib/augments';
+import { contractSolver } from './contract/contractSolver';
+import { largestPrimeFactor } from './contract/largestPrimeFactor';
 // import { Port } from '/ports';
 // import { getRatiosSummary, maximize } from '/ratios'
 
 export async function main(ns: NS): Promise<void> {
   ns.clearLog();
   ns.tail();
-  getFactionRepNeeded(ns).forEach((v, k) => ns.tprint(`${k}: ${ns.formatNumber(v, 0, 1000, true)}`))
-  // const augs = getAugmentList(ns);
-  // augs.forEach(a => {
-  //   ns.tprint(`${a} - ${ns.formatNumber(ns.grafting.getAugmentationGraftPrice(a))} - ${ns.formatNumber(ns.grafting.getAugmentationGraftTime(a))}`);
-  // })
-  // const mults = ns.getBitNodeMultipliers();
-  // ns.print(mults);
-  //const log = ns.getPortHandle(Port.DISPATCH_LOG);
-  //const ratios = await maximize(ns, ns.getServer("foodnstuff"), 40)
-  //log.write(getRatiosSummary(ns, ratios));
-  // const player = ns.getPlayer()
-  // const server = ns.getServer("harakiri-sushi");
-  // const growTimeFormula = ns.formulas.hacking.growTime(server, player)
-  // const growTimeNS = ns.getGrowTime(server.hostname);
-  // ns.tprintf("Formula: %f\nNS: %f", growTimeFormula, growTimeNS);
-  // ns.tprint(ns.getOwnedSourceFiles())
 
-}
-async function batchTest(ns: NS) {
-  const threadLimit = 50;
-  const ratios = await maximize(ns, ns.getServer("n00dles"), threadLimit);
-  ns.print(getRatiosSummary(ns, ratios));
-  const batch = batchHWGW(ns, ratios, threadLimit);
-  for (let index = 0; index < 40; index++) {
-    if (batch.length > 0) {
-      const cur = batch.shift()
-      ns.print("run: ", cur?.filename, cur?.offset);
-    }
-    if (batch.length > 0) {
-      ns.print("next: ", batch[0].filename, batch[0].offset);
-    } else {
-      ns.print("Queue empty, waiting for next batch");
-    }
-    batchHWGW(ns, ratios, threadLimit, batch);
+  const c = ns.codingcontract;
+  const index = 24
+  const types = c.getContractTypes();
+  //console.log(types[index])
+  ns.print(`contract type ${index + 1} of ${types.length}`);
+  //types.forEach(t => ns.print(t))
+  let contracts = ns.ls('home', '.cct');
+  if (contracts.length == 0) {
+    c.createDummyContract(types[index]);
+    contracts = ns.ls('home', '.cct');
   }
-  ns.print(batch.length / 4, " Cycles");
+  ns.print(contracts);
+  const desc = c.getDescription(contracts[0]);
+  const data = c.getData(contracts[0]);
+  ns.print(desc);
+  ns.print(data);
+  const type = c.getContractType(contracts[0]);
+  if (type == types[index]) {
+    ns.print(type);
+  }
+  ns.print("Solving...")
+  contractSolver(ns, 'home', contracts[0])
 }

@@ -2,6 +2,9 @@ import { NS } from '@ns'
 import { teaParty  } from './corp'
 
 export async function main(ns : NS) : Promise<void> {
+  ns.disableLog('sleep');
+  ns.clearLog();
+  ns.tail();
   let stage = 0
   const states = ['START', 'PURCHASE', 'PRODUCTION', 'EXPORT', 'SALE'];
   const c = ns.corporation;

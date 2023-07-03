@@ -1,6 +1,7 @@
 import { CorpEmployeePosition, CorpIndustryName, CorpMaterialName, NS } from '@ns'
 import { checkProducts } from './corp';
 
+
 export async function main(ns: NS) {
     ns.disableLog('sleep');
     ns.clearLog();
@@ -22,7 +23,7 @@ export async function main(ns: NS) {
         { description: "Initial Purchases", action: startUp, parameter: 0 },
         { description: "Waiting for the employers stats to rise", action: waitForTheLazyFucksToGetTheirShitTogether },
         { description: "Buying first production multiplier material batch", action: purchaseMaterials, parameter: 0 },
-        { description: "Expand Springwater", action: expandSpringWater },
+        //{ description: "Expand Springwater", action: expandSpringWater },
         { description: "Accepting the first investment offer", action: invest, parameter: 1 },
         { description: "Further Upgrades", action: upgradeStuff },
         { description: "Waiting for the employers stats to rise for the second time", action: waitForTheLazyFucksToGetTheirShitTogether },
@@ -78,12 +79,15 @@ export async function main(ns: NS) {
         if (stage[0] >= prodStage) {
             const prods = c.getCorporation().divisions.map(d => c.getDivision(d)).filter(d => d.makesProducts)
             while (prodStages.length < prods.length) { prodStages.push(0) }
-            prods.forEach(async (product, i) => {
+
+
+            for (let i = 0; i < prods.length; i++) {
+                const product = prods[i];
                 const prefix = prefixes.get(product.name)
                 if (prefix) {
                     prodStages[i] = await checkProducts(ns, product.name, prefix, prodStages[i])
                 }
-            })
+            }
         }
         first.fill(false);
     }
@@ -162,8 +166,8 @@ export async function main(ns: NS) {
                     if (office.employeeJobs[jobs[i]] < 1)
                         c.setAutoJobAssignment(agricultureName, city, jobs[i], 1);
                 }
-                c.sellMaterial(agricultureName, city, "Plants", "MAX", "MP")
-                c.sellMaterial(agricultureName, city, "Food", "MAX", "MP")
+                if (c.getMaterial(agricultureName, city, "Plants").desiredSellAmount != 'MAX') c.sellMaterial(agricultureName, city, "Plants", "MAX", "MP")
+                if (c.getMaterial(agricultureName, city, "Food").desiredSellAmount != 'MAX') c.sellMaterial(agricultureName, city, "Food", "MAX", "MP")
                 while (c.getWarehouse(agricultureName, city).level < 3) {
                     c.upgradeWarehouse(agricultureName, city);
                 }
@@ -193,10 +197,7 @@ export async function main(ns: NS) {
 
     }
 
-
-
     async function purchaseMaterials(phase: number) {
-        let complete = 0;
         for (const city of cities) {
             for (let i = 0; i < 4; i++) {
                 const m = c.getMaterial(agricultureName, city, boostMaterials[i]);
@@ -204,12 +205,9 @@ export async function main(ns: NS) {
                     ns.print(`Buying ${materialPhases[phase][i] - m.stored} ${boostMaterials[i]} for ${city}`);
                     c.bulkPurchase(agricultureName, city, boostMaterials[i], Math.max(materialPhases[phase][i] - m.stored, 0));
                 }
-                else if (m.stored >= materialPhases[phase][i]) {
-                    complete += 1
-                }
             }
         }
-        if (complete >= cities.length * 4) {
+        if (boostMaterials.every((m, i) => cities.every(city => c.getMaterial(agricultureName, city, m).stored >= materialPhases[phase][i]))) {
             stage[0] += 1;
             stage[1] = 0;
         }
@@ -224,13 +222,15 @@ export async function main(ns: NS) {
 
     async function expandChemicals(key?: number) {
         await expandMaterialDivision("Chemical", chemName, [{ division: agricultureName, material: "Chemicals" }])
-        await addExport(agricultureName, { division: chemName, material: "Plants" })
-        await addExport(chemName, { division: agricultureName, material: "Chemicals" })
+        if (c.getCorporation().divisions.includes(chemName)) {
+            await addExport(agricultureName, { division: chemName, material: "Plants" })
+            await addExport(chemName, { division: agricultureName, material: "Chemicals" })
+        }
     }
 
     async function addExport(fromDivision: string, material: ExportMaterial) {
         cities.forEach(city => {
-            if (!c.getMaterial(fromDivision, city, material.material).exports.find(x => x.city == city && x.division == material.division)) {
+            if (c.hasWarehouse(fromDivision, city) && c.hasWarehouse(material.division, city) && !c.getMaterial(fromDivision, city, material.material).exports.find(x => x.city == city && x.division == material.division)) {
                 c.exportMaterial(fromDivision, city, material.division, city, material.material, "-IPROD");
             }
         })
@@ -280,9 +280,7 @@ export async function main(ns: NS) {
 
                     if (c.hasUnlock("Export")) {
                         exportMaterials.forEach(m => {
-                            if (!c.getMaterial(m.division, city, m.material).exports.find(s => s.city == city && s.division == m.division)) {
-                                c.exportMaterial(divisionName, city, m.division, city, m.material, "-IPROD");
-                            }
+                            addExport(divisionName, m);
                         })
                     }
                 }
@@ -325,7 +323,7 @@ export async function main(ns: NS) {
         // not the old low earning cycles, so we'll wait for a bit.
 
         const offerMoney = c.getInvestmentOffer().funds
-        if (stage[1] <= 5 || fundingTargets[i] > (offerMoney + c.getCorporation().funds)) {
+        if ((stage[1] <= 5 || fundingTargets[i] > (offerMoney + c.getCorporation().funds)) && stage[1] < 75) {
             ns.print(`waiting cycles: ${stage[1]}/5. investors are currently offering: $${ns.formatNumber(offerMoney)}(targeting ${ns.formatNumber(fundingTargets[i])})`);
             stage[1] += 1;
         }
@@ -340,20 +338,17 @@ export async function main(ns: NS) {
 
 
     async function upgradeStuff(key?: number) {
-        let complete = 0
         for (let i = c.getUpgradeLevel(levelUpgrades[0]); i < 10; i++) {
             if (c.getCorporation().funds > c.getUpgradeLevelCost(levelUpgrades[0]))
                 c.levelUpgrade(levelUpgrades[0]);
         }
-        complete = c.getUpgradeLevel(levelUpgrades[0]) == 10 ? 1 : 0;
         for (let i = c.getUpgradeLevel(levelUpgrades[1]); i < 10; i++) {
             if (c.getCorporation().funds > c.getUpgradeLevelCost(levelUpgrades[1]))
                 c.levelUpgrade(levelUpgrades[1]);
         }
-        complete = c.getUpgradeLevel(levelUpgrades[1]) == 10 ? 1 : 0;
 
-        for (let i = 0; i < 2; i++) {
-            for (const city of cities) {
+        for (const city of cities) {
+            for (let i = 0; i < 2; i++) {
                 if (c.getOffice(agricultureName, city).size < 9 && c.getOfficeSizeUpgradeCost(agricultureName, city, 3) < c.getCorporation().funds) {
                     c.upgradeOfficeSize(agricultureName, city, 3);
                     while (c.hireEmployee(agricultureName, city)) { await ns.sleep(0) }
@@ -365,22 +360,26 @@ export async function main(ns: NS) {
                         c.setAutoJobAssignment(agricultureName, city, jobs[4], 5)
                     }
                 }
-                complete += c.getOffice(agricultureName, city).size == 9 ? 1 : 0;
             }
         }
 
         for (let i = 0; i < 7; i++) {
             for (const city of cities) {
-                while (c.getWarehouse(agricultureName, city).level < 10) {
-                    if (c.getUpgradeWarehouseCost(agricultureName, city, 1) < c.getCorporation().funds)
-                        c.upgradeWarehouse(agricultureName, city, 1);
+                while (c.getWarehouse(agricultureName, city).level < 11 && c.getCorporation().funds > c.getUpgradeWarehouseCost(agricultureName, city, 1)) {
+                    c.upgradeWarehouse(agricultureName, city, 1);
                 }
-                complete += c.getWarehouse(agricultureName, city).level == 10 ? 1 : 0;
             }
+
         }
-        if (complete == 14) {
+        if (
+            c.getUpgradeLevel(levelUpgrades[0]) == 10 &&
+            c.getUpgradeLevel(levelUpgrades[1]) == 10 &&
+            cities.every(city => c.getOffice(agricultureName, city).size >= 9 && c.getWarehouse(agricultureName, city).level >= 11)
+        ) {
             stage[0] += 1;
             stage[1] = 0;
+        } else {
+            stage[1] += 1;
         }
     }
 
@@ -416,6 +415,7 @@ export async function main(ns: NS) {
 
     async function expandToTobacco() {
         await expandProductDivision("Tobacco", tobaccoName, tobaccoProductPrefix)
+        await addExport(agricultureName, { division: tobaccoName, material: "Plants" })
     }
 
     async function expandToRestaraunt() {
@@ -468,7 +468,7 @@ export async function main(ns: NS) {
             for (let i = o.size / 3; i < 3; i++) {
                 c.upgradeOfficeSize(divisionName, city, 3);
             }
-            while (c.hireEmployee(divisionName, city)) { ns.print("error 406") }
+            while (c.hireEmployee(divisionName, city)) { await ns.sleep(0) }
             jobs.map(j => c.setAutoJobAssignment(divisionName, city, j, 0));
             const empch = Math.floor((3 / 15) * o.size)
             const empcl = Math.floor((2 / 15) * o.size)
@@ -479,22 +479,22 @@ export async function main(ns: NS) {
             c.setAutoJobAssignment(divisionName, city, jobs[4], o.size - (3 * empch + empcl))
 
         }
-        //ns.print('check products')
+
         if (c.getDivision(divisionName).products.length == 0) {
             c.makeProduct(divisionName, cities[0], productPrefix + "1", 1e9, 1e9);
         }
-        //ns.print(`checking for ${levelUpgrades[6]} upgrades`);
+
         while (c.getCorporation().funds > c.getUpgradeLevelCost(levelUpgrades[6])) {
             ns.print(`Buying ${levelUpgrades[6]} ${c.getUpgradeLevel(levelUpgrades[6]) + 1}`);
             c.levelUpgrade(levelUpgrades[6]);
         }
-        //ns.print(`check Dreamsense`)
+
         try {
             for (let i = c.getUpgradeLevel("DreamSense"); i < 10; i++) {
                 c.levelUpgrade("DreamSense");
             }
         } catch { ns.print("error 431") }
-        //ns.print('check other upgrades')
+
         try {
             for (let i = 2; i < 6; i++) {
                 while (c.getUpgradeLevel(levelUpgrades[i]) < 20) {
@@ -502,52 +502,12 @@ export async function main(ns: NS) {
                 }
             }
         } catch { ns.print("error 439") }
-        //ns.print(`check Project Insight`)
+
         try {
             for (let i = c.getUpgradeLevel("Project Insight"); i < 10; i++) {
                 c.levelUpgrade("Project Insight");
             }
         } catch { ns.print("error 445") }
-        //ns.print('check products') 
-        // div = c.getDivision(divisionName);
-        // const maxProds = getMaxProducts(divisionName);
-        // let prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
-        // const nextProd = Math.max(...prods.map(p => Number.parseInt(p.name.substring(productPrefix.length)))) + 1;
-        // //ns.print(`${prods.filter(p => p.developmentProgress < 100).length} products in development`);
-        // if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
-        //     stage[1] += 1
-        //     if (stage[1] > 4) {
-        //         const worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c)
-        //         ns.print(`Discontinuing ${worst.name} (rating: ${worst.effectiveRating})`)
-        //         c.discontinueProduct(divisionName, worst.name);
-        //         await ns.sleep(10);
-        //         stage[1] = 0
-        //     }
-        //     else {
-        //         ns.print("Products full, maturing");
-        //     }
-        // }
-        // div = c.getDivision(divisionName);
-        // prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
-        // if (prods.length < maxProds && c.getCorporation().funds > 2 * 1e9) {
-        //     ns.print(`Devloping new product: ${productPrefix + nextProd.toString()}`)
-        //     c.makeProduct(divisionName, cities[0], productPrefix + nextProd.toString(), 1e9, 1e9)
-        //     await ns.sleep(10);
-        // }
-        // div = c.getDivision(divisionName);
-        // prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
-        // cities.forEach(city => {
-        //     prods.forEach(p => {
-        //         const product = c.getProduct(divisionName, city, p.name)
-        //         if (product.desiredSellAmount == 0 || product.desiredSellPrice == 0) {
-        //             c.sellProduct(divisionName, city, product.name, "MAX", "MP", false);
-
-        //         }
-        //         if (c.hasResearched(divisionName, "Market-TA.II")) {
-        //             c.setProductMarketTA2(divisionName, product.name, true);
-        //         }
-        //     })
-        // });
 
         if (
             c.getUpgradeLevel("Project Insight") >= 10 &&
@@ -556,16 +516,25 @@ export async function main(ns: NS) {
             c.getOffice(divisionName, cities[0]).size >= 30 &&
             c.getDivision(divisionName).cities.length == 6
         ) {
+            console.log(
+                divisionName,
+                c.getUpgradeLevel("Project Insight"),
+                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr),
+                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)),
+                c.getUpgradeLevel("DreamSense"),
+                c.getOffice(divisionName, cities[0]).size,
+                c.getDivision(divisionName).cities.length
+            )
             stage[0] += 1;
             stage[1] = 0;
         } else {
             console.log(
-                c.getUpgradeLevel("Project Insight") >= 10,
-                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr) >= 20,
+                c.getUpgradeLevel("Project Insight"),
+                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr),
                 levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)),
-                c.getUpgradeLevel("DreamSense") >= 10,
-                c.getOffice(divisionName, cities[0]).size >= 30,
-                c.getDivision(divisionName).cities.length == 6
+                c.getUpgradeLevel("DreamSense"),
+                c.getOffice(divisionName, cities[0]).size,
+                c.getDivision(divisionName).cities.length
             )
             stage[1] += 1;
         }
