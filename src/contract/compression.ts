@@ -72,7 +72,7 @@ export function lzCompression(uncompressed: string) {
 
   // Output the code for w.
   if (w !== "") {
-    result.push(dictionary[w]);
+    //result.push(dictionary.get(w));
   }
   return result;
 }

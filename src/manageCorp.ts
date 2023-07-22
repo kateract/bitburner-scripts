@@ -25,13 +25,13 @@ export async function main(ns: NS) {
         { description: "Buying first production multiplier material batch", action: purchaseMaterials, parameter: 0 },
         //{ description: "Expand Springwater", action: expandSpringWater },
         { description: "Accepting the first investment offer", action: invest, parameter: 1 },
-        { description: "Further Upgrades", action: upgradeStuff },
-        { description: "Waiting for the employers stats to rise for the second time", action: waitForTheLazyFucksToGetTheirShitTogether },
-        { description: "Buying second production multiplier material batch", action: purchaseMaterials, parameter: 1 },
-        { description: "Reassign employees", action: reAssignEmployees },
-        { description: "Accepting the second investor offer", action: invest, parameter: 2 },
-        { description: "Last Agriculture upgrades", action: lastAGUpgrades },
-        { description: "Buying third production multiplier material batch", action: purchaseMaterials, parameter: 2 },
+        // { description: "Further Upgrades", action: upgradeStuff },
+        // { description: "Waiting for the employers stats to rise for the second time", action: waitForTheLazyFucksToGetTheirShitTogether },
+        // { description: "Buying second production multiplier material batch", action: purchaseMaterials, parameter: 1 },
+        // { description: "Reassign employees", action: reAssignEmployees },
+        // { description: "Accepting the second investor offer", action: invest, parameter: 2 },
+        // { description: "Last Agriculture upgrades", action: lastAGUpgrades },
+        // { description: "Buying third production multiplier material batch", action: purchaseMaterials, parameter: 2 },
         { description: "Expand to Tobacco", action: expandToTobacco },
         { description: "Expand to Chemicals", action: expandChemicals },
         { description: "Expand to Restaurant", action: expandToRestaraunt },
@@ -117,13 +117,12 @@ export async function main(ns: NS) {
         parameter?: number;
     }
 
-
-
     async function checkStage() {
         if (stage[1] == 0) ns.print(stages[stage[0]].description)
         await stages[stage[0]].action(stages[stage[0]].parameter ?? 0)
         return;
     }
+
     async function spawnCorp(key: number) {
         ns.spawn("corp.js");
     }
@@ -217,88 +216,27 @@ export async function main(ns: NS) {
     }
 
     async function expandSpringWater(key?: number) {
-        await expandMaterialDivision("Spring Water", waterName, [{ division: agricultureName, material: "Water" }])
+        await expandMaterialDivision(ns, "Spring Water", waterName, [{ division: agricultureName, material: "Water" }])
     }
 
     async function expandChemicals(key?: number) {
-        await expandMaterialDivision("Chemical", chemName, [{ division: agricultureName, material: "Chemicals" }])
+        await expandMaterialDivision(ns, "Chemical", chemName, [{ division: agricultureName, material: "Chemicals" }])
         if (c.getCorporation().divisions.includes(chemName)) {
-            await addExport(agricultureName, { division: chemName, material: "Plants" })
-            await addExport(chemName, { division: agricultureName, material: "Chemicals" })
+            await addExport(ns, agricultureName, { division: chemName, material: "Plants" })
+            await addExport(ns, chemName, { division: agricultureName, material: "Chemicals" })
         }
-    }
-
-    async function addExport(fromDivision: string, material: ExportMaterial) {
-        cities.forEach(city => {
-            if (c.hasWarehouse(fromDivision, city) && c.hasWarehouse(material.division, city) && !c.getMaterial(fromDivision, city, material.material).exports.find(x => x.city == city && x.division == material.division)) {
-                c.exportMaterial(fromDivision, city, material.division, city, material.material, "-IPROD");
-            }
-        })
-    }
-
-    type ExportMaterial = { material: CorpMaterialName, division: string }
-
-    async function expandMaterialDivision(divType: CorpIndustryName, divisionName: string, exportMaterials: ExportMaterial[]) {
-
-        if (!c.hasUnlock("Export") && c.getUnlockCost("Export") < c.getCorporation().funds) {
-            c.purchaseUnlock("Export")
-        }
-        let corp = c.getCorporation();
-        let div = corp.divisions?.map(d => c.getDivision(d)).find(f => f.type == divType)
-        const industryData = c.getIndustryData(divType);
-        if (!div && industryData.startingCost < c.getCorporation().funds) {
-            c.expandIndustry(divType, divisionName)
-
-            div = c.getDivision(divisionName);
-        }
-        if (div) {
-            for (const city of cities) {
-
-                if (!div.cities.find(c => c == city) && constants.officeInitialCost < c.getCorporation().funds) {
-                    c.expandCity(div.name, city)
-                }
-                if (!c.getDivision(divisionName).cities.includes(city)) continue;
-                const office = c.getOffice(divisionName, city);
-                if (!office) continue;
-                if (!c.hasWarehouse(divisionName, city) && c.getCorporation().funds > constants.warehouseInitialCost) {
-                    c.purchaseWarehouse(divisionName, city);
-                }
-
-                while (office.numEmployees < 3 && c.hireEmployee(divisionName, city)) { await ns.sleep(0) }
-                for (let i = 0; i < 3; i++) {
-                    if (office.employeeJobs[jobs[i]] < 1)
-                        c.setAutoJobAssignment(divisionName, city, jobs[i], 1);
-                }
-                if (c.hasWarehouse(divisionName, city)) {
-                    c.setSmartSupply(divisionName, city, true)
-                    exportMaterials.forEach(m => {
-                        c.sellMaterial(divisionName, city, m.material, "MAX", "MP")
-                    });
-                    while (c.getWarehouse(divisionName, city).level < 3 && c.getUpgradeWarehouseCost(divisionName, city) < c.getCorporation().funds) {
-                        c.upgradeWarehouse(divisionName, city);
-                    }
-
-                    if (c.hasUnlock("Export")) {
-                        exportMaterials.forEach(m => {
-                            addExport(divisionName, m);
-                        })
-                    }
-                }
-            }
-        }
-        corp = c.getCorporation()
-        if (corp.divisions.find(d => d == divisionName) && c.hasUnlock("Export")) {
-            div = c.getDivision(divisionName);
+        const corp = c.getCorporation()
+        if (corp.divisions.find(d => d == chemName) && c.hasUnlock("Export")) {
+            const div = c.getDivision(chemName);
             console.log(div);
 
-            if (cities.every(city => div?.cities.includes(city)) && cities.every(city => c.hasWarehouse(divisionName, city)) && cities.map(city => c.getWarehouse(divisionName, city).level).every(wlevel => wlevel >= 3) && div) {
+            if (cities.every(city => div?.cities.includes(city)) && cities.every(city => c.hasWarehouse(chemName, city)) && cities.map(city => c.getWarehouse(chemName, city).level).every(wlevel => wlevel >= 3) && div) {
                 stage[0] += 1;
                 stage[1] = 0;
                 return
             }
         }
         stage[1] += 1;
-
 
 
     }
@@ -335,7 +273,6 @@ export async function main(ns: NS) {
             stage[1] = 0;
         }
     }
-
 
     async function upgradeStuff(key?: number) {
         for (let i = c.getUpgradeLevel(levelUpgrades[0]); i < 10; i++) {
@@ -414,131 +351,16 @@ export async function main(ns: NS) {
     }
 
     async function expandToTobacco() {
-        await expandProductDivision("Tobacco", tobaccoName, tobaccoProductPrefix)
-        await addExport(agricultureName, { division: tobaccoName, material: "Plants" })
+        await expandProductDivision(ns, "Tobacco", tobaccoName, tobaccoProductPrefix)
+        await addExport(ns, agricultureName, { division: tobaccoName, material: "Plants" })
     }
 
     async function expandToRestaraunt() {
-        await expandProductDivision("Restaurant", restName, restPrefix)
+        await expandProductDivision(ns, "Restaurant", restName, restPrefix)
+        await addExport(ns, agricultureName, { division: restName, material: "Food" });
     }
 
-    async function expandProductDivision(divisionType: CorpIndustryName, divisionName: string, productPrefix: string) {
-        const corp = c.getCorporation();
-        const divisions = corp.divisions.map(d => c.getDivision(d))
 
-        if (!divisions.find(d => d.type == divisionType)) {
-            try { c.expandIndustry(divisionType, divisionName); } catch { ns.tprint("Couldn't expand.. no money"); ns.exit(); }
-        }
-        const div = divisions.find(d => d.type == divisionType);
-        if (!div) return;
-        divisionName = div.name;
-        if (!div.cities.find(c => c == cities[0])) {
-            c.expandCity(divisionName, cities[0]);
-        }
-        if (!c.hasWarehouse(divisionName, cities[0])) {
-            c.purchaseWarehouse(divisionName, cities[0]);
-        }
-        try {
-            const o = c.getOffice(divisionName, cities[0]);
-            for (let i = o.size / 3; i < 10; i++) {
-                c.upgradeOfficeSize(divisionName, cities[0], 3);
-            }
-            while (c.hireEmployee(divisionName, cities[0])) { await ns.sleep(0) }
-            c.setAutoJobAssignment(divisionName, cities[0], jobs[0], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
-            c.setAutoJobAssignment(divisionName, cities[0], jobs[1], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
-            c.setAutoJobAssignment(divisionName, cities[0], jobs[2], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
-            c.setAutoJobAssignment(divisionName, cities[0], jobs[3], Math.ceil(c.getOffice(divisionName, cities[0]).size / 5))
-            c.setAutoJobAssignment(divisionName, cities[0], jobs[4], Math.ceil(c.getOffice(divisionName, cities[0]).size / 5))
-        } catch { ns.print("error assigning jobs") }
-
-        //ns.print('check cities')
-        for (const city of cities) {
-            if (city == cities[0]) continue;
-            try {
-                if (!div.cities.find(c => c == city)) {
-                    ns.print(`Expanding ${divisionName} to ${city}`)
-                    c.expandCity(divisionName, city);
-                }
-
-
-                if (!c.hasWarehouse(divisionName, city))
-                    c.purchaseWarehouse(divisionName, city);
-            } catch { ns.print("error 401") }
-            const o = c.getOffice(divisionName, city);
-            for (let i = o.size / 3; i < 3; i++) {
-                c.upgradeOfficeSize(divisionName, city, 3);
-            }
-            while (c.hireEmployee(divisionName, city)) { await ns.sleep(0) }
-            jobs.map(j => c.setAutoJobAssignment(divisionName, city, j, 0));
-            const empch = Math.floor((3 / 15) * o.size)
-            const empcl = Math.floor((2 / 15) * o.size)
-            c.setAutoJobAssignment(divisionName, city, jobs[0], empch)
-            c.setAutoJobAssignment(divisionName, city, jobs[1], empch)
-            c.setAutoJobAssignment(divisionName, city, jobs[2], empcl)
-            c.setAutoJobAssignment(divisionName, city, jobs[3], empch)
-            c.setAutoJobAssignment(divisionName, city, jobs[4], o.size - (3 * empch + empcl))
-
-        }
-
-        if (c.getDivision(divisionName).products.length == 0) {
-            c.makeProduct(divisionName, cities[0], productPrefix + "1", 1e9, 1e9);
-        }
-
-        while (c.getCorporation().funds > c.getUpgradeLevelCost(levelUpgrades[6])) {
-            ns.print(`Buying ${levelUpgrades[6]} ${c.getUpgradeLevel(levelUpgrades[6]) + 1}`);
-            c.levelUpgrade(levelUpgrades[6]);
-        }
-
-        try {
-            for (let i = c.getUpgradeLevel("DreamSense"); i < 10; i++) {
-                c.levelUpgrade("DreamSense");
-            }
-        } catch { ns.print("error 431") }
-
-        try {
-            for (let i = 2; i < 6; i++) {
-                while (c.getUpgradeLevel(levelUpgrades[i]) < 20) {
-                    c.levelUpgrade(levelUpgrades[i]);
-                }
-            }
-        } catch { ns.print("error 439") }
-
-        try {
-            for (let i = c.getUpgradeLevel("Project Insight"); i < 10; i++) {
-                c.levelUpgrade("Project Insight");
-            }
-        } catch { ns.print("error 445") }
-
-        if (
-            c.getUpgradeLevel("Project Insight") >= 10 &&
-            levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr) >= 20 &&
-            c.getUpgradeLevel("DreamSense") >= 10 &&
-            c.getOffice(divisionName, cities[0]).size >= 30 &&
-            c.getDivision(divisionName).cities.length == 6
-        ) {
-            console.log(
-                divisionName,
-                c.getUpgradeLevel("Project Insight"),
-                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr),
-                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)),
-                c.getUpgradeLevel("DreamSense"),
-                c.getOffice(divisionName, cities[0]).size,
-                c.getDivision(divisionName).cities.length
-            )
-            stage[0] += 1;
-            stage[1] = 0;
-        } else {
-            console.log(
-                c.getUpgradeLevel("Project Insight"),
-                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr),
-                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)),
-                c.getUpgradeLevel("DreamSense"),
-                c.getOffice(divisionName, cities[0]).size,
-                c.getDivision(divisionName).cities.length
-            )
-            stage[1] += 1;
-        }
-    }
 
     async function waitForCash(amount: number) {
         stage[1] += 1;
@@ -555,5 +377,209 @@ export async function main(ns: NS) {
         max += c.hasResearched(division, "uPgrade: Capacity.I") ? 1 : 0
         max += c.hasResearched(division, "uPgrade: Capacity.II") ? 1 : 0
         return max;
+    }
+    function upgradeCorporation() {
+
+        while (c.getCorporation().funds > c.getUpgradeLevelCost(levelUpgrades[6])) {
+            ns.print(`Buying ${levelUpgrades[6]} ${c.getUpgradeLevel(levelUpgrades[6]) + 1}`);
+            c.levelUpgrade(levelUpgrades[6]);
+        }
+    
+        try {
+            for (let i = c.getUpgradeLevel("DreamSense"); i < 10; i++) {
+                c.levelUpgrade("DreamSense");
+            }
+        } catch { ns.print("error 431") }
+    
+        try {
+            for (let i = 2; i < 6; i++) {
+                while (c.getUpgradeLevel(levelUpgrades[i]) < 20) {
+                    c.levelUpgrade(levelUpgrades[i]);
+                }
+            }
+        } catch { ns.print("error 439") }
+    
+        try {
+            for (let i = c.getUpgradeLevel("Project Insight"); i < 10; i++) {
+                c.levelUpgrade("Project Insight");
+            }
+        } catch { ns.print("error 445") }
+    
+        if (
+            c.getUpgradeLevel("Project Insight") >= 10 &&
+            levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr) >= 20 &&
+            c.getUpgradeLevel("DreamSense") >= 10
+        ) {
+            console.log(
+                c.getUpgradeLevel("Project Insight"),
+                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr),
+                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)),
+                c.getUpgradeLevel("DreamSense")
+            )
+            stage[0] += 1;
+            stage[1] = 0;
+        } else {
+            console.log(
+                c.getUpgradeLevel("Project Insight"),
+                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)).reduce((prev, curr) => prev < curr ? prev : curr),
+                levelUpgrades.slice(2, 6).map(u => c.getUpgradeLevel(u)),
+                c.getUpgradeLevel("DreamSense")
+            )
+            stage[1] += 1;
+        }
+    }
+}
+
+export type ExportMaterial = { material: CorpMaterialName, division: string }
+
+export async function addExport(ns: NS, fromDivision: string, material: ExportMaterial) {
+    const c = ns.corporation
+    const CityName = ns.enums.CityName;
+    const cities = [CityName.Aevum, CityName.Chongqing, CityName.NewTokyo, CityName.Ishima, CityName.Volhaven, CityName.Sector12];
+    cities.forEach(city => {
+        if (c.hasWarehouse(fromDivision, city) && c.hasWarehouse(material.division, city) && !c.getMaterial(fromDivision, city, material.material).exports.find(x => x.city == city && x.division == material.division)) {
+            c.exportMaterial(fromDivision, city, material.division, city, material.material, "-IPROD");
+        }
+    })
+}
+
+export async function expandMaterialDivision(ns: NS, divType: CorpIndustryName, divisionName: string, exportMaterials: ExportMaterial[]) {
+    const c = ns.corporation
+    const CityName = ns.enums.CityName;
+    const constants = c.getConstants();
+    const cities = [CityName.Aevum, CityName.Chongqing, CityName.NewTokyo, CityName.Ishima, CityName.Volhaven, CityName.Sector12];
+    const jobs: CorpEmployeePosition[] = ["Operations", "Engineer", "Business", "Management", "Research & Development", "Intern", "Unassigned"];
+
+    if (!c.hasUnlock("Export") && c.getUnlockCost("Export") < c.getCorporation().funds) {
+        c.purchaseUnlock("Export")
+    }
+    let corp = c.getCorporation();
+    let div = corp.divisions?.map(d => c.getDivision(d)).find(f => f.type == divType)
+    const industryData = c.getIndustryData(divType);
+    if (!div && industryData.startingCost < c.getCorporation().funds) {
+        c.expandIndustry(divType, divisionName)
+
+        div = c.getDivision(divisionName);
+    }
+    if (div) {
+        for (const city of cities) {
+
+            if (!div.cities.find(c => c == city) && constants.officeInitialCost < c.getCorporation().funds) {
+                c.expandCity(div.name, city)
+            }
+            if (!c.getDivision(divisionName).cities.includes(city)) continue;
+            const office = c.getOffice(divisionName, city);
+            if (!office) continue;
+            if (!c.hasWarehouse(divisionName, city) && c.getCorporation().funds > constants.warehouseInitialCost) {
+                c.purchaseWarehouse(divisionName, city);
+            }
+
+            while (office.numEmployees < 3 && c.hireEmployee(divisionName, city)) { await ns.sleep(0) }
+            for (let i = 0; i < 3; i++) {
+                if (office.employeeJobs[jobs[i]] < 1)
+                    c.setAutoJobAssignment(divisionName, city, jobs[i], 1);
+            }
+            if (c.hasWarehouse(divisionName, city)) {
+                c.setSmartSupply(divisionName, city, true)
+                exportMaterials.forEach(m => {
+                    c.sellMaterial(divisionName, city, m.material, "MAX", "MP")
+                });
+                while (c.getWarehouse(divisionName, city).level < 3 && c.getUpgradeWarehouseCost(divisionName, city) < c.getCorporation().funds) {
+                    c.upgradeWarehouse(divisionName, city);
+                }
+
+                if (c.hasUnlock("Export")) {
+                    exportMaterials.forEach(m => {
+                        addExport(ns, divisionName, m);
+                    })
+                }
+            }
+        }
+    }
+    corp = c.getCorporation()
+    if (corp.divisions.find(d => d == divisionName) && c.hasUnlock("Export")) {
+        div = c.getDivision(divisionName);
+        console.log(div);
+
+        if (cities.every(city => div?.cities.includes(city)) && cities.every(city => c.hasWarehouse(divisionName, city)) && cities.map(city => c.getWarehouse(divisionName, city).level).every(wlevel => wlevel >= 3) && div) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export async function expandProductDivision(ns: NS, divisionType: CorpIndustryName, divisionName: string, productPrefix: string) {
+    const c = ns.corporation;
+    const corp = c.getCorporation();
+    const constants = c.getConstants();
+    const CityName = ns.enums.CityName;
+    const cities = [CityName.Aevum, CityName.Chongqing, CityName.NewTokyo, CityName.Ishima, CityName.Volhaven, CityName.Sector12];
+    const jobs: CorpEmployeePosition[] = ["Operations", "Engineer", "Business", "Management", "Research & Development", "Intern", "Unassigned"];
+
+    const divisions = corp.divisions.map(d => c.getDivision(d))
+    const data = c.getIndustryData(divisionType);
+    if (!divisions.find(d => d.type == divisionType) && corp.funds > data.startingCost) {
+        try { c.expandIndustry(divisionType, divisionName); } catch { ns.tprint("Couldn't expand.. no money"); ns.exit(); }
+    }
+    let div = divisions.find(d => d.type == divisionType);
+    if (!div) return;
+    divisionName = div.name;
+    if (!div.cities.find(c => c == cities[0]) && constants.officeInitialCost < c.getCorporation().funds) {
+
+        c.expandCity(divisionName, cities[0]);
+
+    }
+    div = c.getDivision(divisionName);
+    if (div.cities.includes(cities[0]) && !c.hasWarehouse(divisionName, cities[0]) && constants.warehouseInitialCost < c.getCorporation().funds) {
+        c.purchaseWarehouse(divisionName, cities[0]);
+    }
+    try {
+        div = c.getDivision(divisionName)
+        if (div.cities.includes(cities[0])) {
+            const o = c.getOffice(divisionName, cities[0]);
+            for (let i = o.size / 3; i < 10; i++) {
+                c.upgradeOfficeSize(divisionName, cities[0], 3);
+            }
+            while (c.hireEmployee(divisionName, cities[0])) { await ns.sleep(0) }
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[0], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[1], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[2], Math.floor(c.getOffice(divisionName, cities[0]).size / 5))
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[3], Math.ceil(c.getOffice(divisionName, cities[0]).size / 5))
+            c.setAutoJobAssignment(divisionName, cities[0], jobs[4], Math.ceil(c.getOffice(divisionName, cities[0]).size / 5))
+        }
+    } catch { ns.print("error assigning jobs") }
+
+    //ns.print('check cities')
+    for (const city of cities) {
+        if (city == cities[0]) continue;
+        if (!div.cities.find(c => c == city) && constants.officeInitialCost < c.getCorporation().funds) {
+            ns.print(`Expanding ${divisionName} to ${city}`)
+            c.expandCity(divisionName, city);
+        }
+
+        div = c.getDivision(divisionName);
+        if (div.cities.includes(city) && !c.hasWarehouse(divisionName, city) && constants.warehouseInitialCost < c.getCorporation().funds)
+            c.purchaseWarehouse(divisionName, city);
+        div = c.getDivision(divisionName)
+        if (!div.cities.includes(city)) continue;
+        const o = c.getOffice(divisionName, city);
+        if (o.size < 15 && c.getOfficeSizeUpgradeCost(divisionName, city, 3) < c.getCorporation().funds) {
+            c.upgradeOfficeSize(divisionName, city, 3);
+        }
+        while (c.hireEmployee(divisionName, city)) { await ns.sleep(0) }
+        jobs.map(j => c.setAutoJobAssignment(divisionName, city, j, 0));
+        const empch = Math.floor((3 / 15) * o.size)
+        const empcl = Math.floor((2 / 15) * o.size)
+        c.setAutoJobAssignment(divisionName, city, jobs[0], empch)
+        c.setAutoJobAssignment(divisionName, city, jobs[1], empch)
+        c.setAutoJobAssignment(divisionName, city, jobs[2], empcl)
+        c.setAutoJobAssignment(divisionName, city, jobs[3], empch)
+        c.setAutoJobAssignment(divisionName, city, jobs[4], o.size - (3 * empch + empcl))
+
+    }
+    div = c.getDivision(divisionName)
+    if (div.products.length == 0 && c.hasWarehouse(divisionName, cities[0]) && c.getCorporation().funds > 2e9) {
+        c.makeProduct(divisionName, cities[0], productPrefix + "1", 1e9, 1e9);
     }
 }

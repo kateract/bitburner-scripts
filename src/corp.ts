@@ -1,4 +1,5 @@
-import { CityName, CorpEmployeePosition, CorpUpgradeName, Division, NS, Office } from '@ns'
+import { CityName, CorpConstants, CorpEmployeePosition, CorpIndustryData, CorpIndustryName, CorpMaterialConstantData, CorpMaterialName, CorpUpgradeName, Corporation, CorporationInfo, CrimeType, Division, InvestmentOffer, Material, NS, Office, Product, Warehouse } from '@ns'
+import { addExport } from './manageCorp';
 
 
 export async function main(ns: NS) {
@@ -6,13 +7,13 @@ export async function main(ns: NS) {
     ns.clearLog();
     ns.tail();
     const states = ['START', 'PURCHASE', 'PRODUCTION', 'EXPORT', 'SALE'];
-    const c = ns.corporation
+    const c = new CorporationManager(ns);
     const tobaccoProductPrefix = "DeathSticksV";
     const stage = [0, 0]
     const cities = Object.values(ns.enums.CityName)
 
     const corp = c.getCorporation();
-    const divisions = corp.divisions.map(d => c.getDivision(d))
+    const divisions = c.divisions
     const div = divisions.find(d => d.type == "Tobacco");
     if (!div) return;
     const tobaccoName = div.name;
@@ -21,6 +22,8 @@ export async function main(ns: NS) {
     const restName = rdiv.name;
     const prodStages = [0, 0]
     while (stage[0] >= 0) {
+        const corp = c.getCorporation();
+        const divisions = corp.divisions.map(d => c.getDivision(d))
         while (c.getCorporation().state == states[0]) {
             await ns.sleep(10);
         }
@@ -41,26 +44,233 @@ export async function main(ns: NS) {
         await teaParty(ns);
         divisions.filter(d => !d.makesProducts)
             .forEach(d => cities
-                .forEach(city => hirePeople(ns, d.name, city, c.getOffice(d.name, city).size > 9 ? "even" : "starting")))
+                .forEach(city => hirePeople(ns, d.name, city, c.getOffice(d.name, city).size > 9 ? "even" : "starting")));
         await checkResearch(ns);
-        //await checkExports(ns);
+        await ns.sleep(1001);
+        console.log("new");
     }
 }
 
-export async function checkExports(ns: NS) {
-    const c = ns.corporation;
-    const corp = c.getCorporation();
-    const divisions = corp.divisions.map(d => c.getDivision(d));
-    const industries = divisions.map(d => c.getIndustryData(d.type));
-    const chains: number[][] = [];
-    divisions.filter(d => d.makesProducts).map(d => divisions.indexOf(d)).forEach(d => chains.push([d]));
+export class CorporationManager implements Corporation {
+    public readonly c: Corporation
+    public readonly constants: CorpConstants
+    public get funds(): number { return this.c.getCorporation().funds; }
+    public get divisionNames(): string[] { return this.c.getCorporation().divisions}
+    public get divisions(): Division[] { return this.divisionNames.map(d => this.c.getDivision(d)) }
+    public offices(divisionName: string) { return cities.map(c => this.getOffice(divisionName, c))}
+    constructor(private ns: NS) {
+        
+        this.c = ns.corporation;
+        this.constants = this.c.getConstants();
+    }
+
+    //#region corporation interface methods
+    hasCorporation(): boolean {
+        return this.c.hasCorporation();
+    }
+    createCorporation(corporationName: string, selfFund: boolean): boolean {
+        return this.c.createCorporation(corporationName, selfFund);
+    }
+    hasUnlock(upgradeName: string): boolean {
+        return this.c.hasUnlock(upgradeName);
+    }
+    getUnlockCost(upgradeName: string): number {
+        return this.c.getUnlockCost(upgradeName);
+    }
+    getUpgradeLevel(upgradeName: string): number {
+        return this.c.getUpgradeLevel(upgradeName)
+    }
+    getUpgradeLevelCost(upgradeName: string): number {
+        return this.c.getUpgradeLevelCost(upgradeName);
+    }
+    getInvestmentOffer(): InvestmentOffer {
+        return this.c.getInvestmentOffer();
+    }
+    getConstants(): CorpConstants {
+        return this.c.getConstants();
+    }
+    getMaterialData(materialName: CorpMaterialName): CorpMaterialConstantData {
+        return this.c.getMaterialData(materialName)
+    }
+    acceptInvestmentOffer(): boolean {
+        return this.c.acceptInvestmentOffer()
+    }
+    goPublic(numShares: number): boolean {
+        return this.c.goPublic(numShares);
+    }
+    bribe(factionName: string, amountCash: number): boolean {
+        return this.c.bribe(factionName, amountCash);
+    }
+    expandIndustry(industryType: CorpIndustryName, divisionName: string): void {
+        return this.c.expandIndustry(industryType, divisionName);
+    }
+    expandCity(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo'): void {
+        return this.c.expandCity(divisionName, city);
+    }
+    purchaseUnlock(upgradeName: string): void {
+        return this.c.purchaseUnlock(upgradeName);
+    }
+    levelUpgrade(upgradeName: string): void {
+        return this.c.levelUpgrade(upgradeName)
+    }
+    issueDividends(rate: number): void {
+        return this.c.issueDividends(rate);
+    }
+    issueNewShares(amount?: number | undefined): number {
+        return this.c.issueNewShares(amount);
+    }
+    buyBackShares(amount: number): void {
+        return this.c.buyBackShares(amount)
+    }
+    sellShares(amount: number): void {
+        return this.c.sellShares(amount);
+    }
+    getBonusTime(): number {
+        return this.c.getBonusTime();
+    }
+    sellMaterial(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string, amt: string, price: string): void {
+        return this.c.sellMaterial(divisionName, city, materialName, amt, price);
+    }
+    sellProduct(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', productName: string, amt: string, price: string, all: boolean): void {
+        return this.c.sellProduct(divisionName, city, productName, amt, price, all);
+    }
+    discontinueProduct(divisionName: string, productName: string): void {
+        return this.c.discontinueProduct(divisionName, productName);
+    }
+    setSmartSupply(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', enabled: boolean): void {
+        return this.c.setSmartSupply(divisionName, city, enabled);
+    }
+    setSmartSupplyOption(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string, option: string): void {
+        return this.c.setSmartSupplyOption(divisionName, city, materialName, option);
+    }
+    buyMaterial(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string, amt: number): void {
+        return this.c.buyMaterial(divisionName, city, materialName, amt);
+    }
+    bulkPurchase(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string, amt: number): void {
+        return this.c.bulkPurchase(divisionName, city, materialName, amt)
+    }
+    getWarehouse(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo'): Warehouse {
+        return this.c.getWarehouse(divisionName, city);
+    }
+    getProduct(divisionName: string, cityName: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', productName: string): Product {
+        return this.c.getProduct(divisionName, cityName, productName);
+    }
+    getMaterial(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string): Material {
+        return this.c.getMaterial(divisionName, city, materialName);
+    }
+    setMaterialMarketTA1(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string, on: boolean): void {
+        return this.c.setMaterialMarketTA1(divisionName, city, materialName, on);
+    }
+    setMaterialMarketTA2(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string, on: boolean): void {
+        return this.c.setMaterialMarketTA2(divisionName, city, materialName, on);
+    }
+    setProductMarketTA1(divisionName: string, productName: string, on: boolean): void {
+        return this.c.setProductMarketTA1(divisionName, productName, on);
+    }
+    setProductMarketTA2(divisionName: string, productName: string, on: boolean): void {
+        return this.c.setProductMarketTA2(divisionName, productName, on);
+    }
+    exportMaterial(sourceDivision: string, sourceCity: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', targetDivision: string, targetCity: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string, amt: string | number): void {
+        return this.c.exportMaterial(sourceDivision, sourceCity, targetDivision, targetCity, materialName, amt);
+    }
+    cancelExportMaterial(sourceDivision: string, sourceCity: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', targetDivision: string, targetCity: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string): void {
+        return this.c.cancelExportMaterial(sourceDivision, sourceCity, targetDivision, targetCity, materialName);
+    }
+    purchaseWarehouse(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo'): void {
+        return this.c.purchaseWarehouse(divisionName, city);
+    }
+    upgradeWarehouse(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', amt?: number | undefined): void {
+        return this.c.upgradeWarehouse(divisionName, city, amt);
+    }
+    makeProduct(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', productName: string, designInvest: number, marketingInvest: number): void {
+        return this.c.makeProduct(divisionName, city, productName, designInvest, marketingInvest);
+    }
+    limitMaterialProduction(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', materialName: string, qty: number): void {
+        return this.c.limitMaterialProduction(divisionName, city, materialName, qty);
+    }
+    limitProductProduction(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', productName: string, qty: number): void {
+        return this.c.limitProductProduction(divisionName, city, productName, qty);
+    }
+    getUpgradeWarehouseCost(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', amt?: number | undefined): number {
+        return this.c.getUpgradeWarehouseCost(divisionName, city, amt);
+    }
+    hasWarehouse(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo'): boolean {
+        return this.c.hasWarehouse(divisionName, city);
+    }
+    hireEmployee(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', employeePosition?: CorpEmployeePosition | undefined): boolean {
+        return this.c.hireEmployee(divisionName, city, employeePosition);
+    }
+    upgradeOfficeSize(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', size: number): void {
+        return this.c.upgradeOfficeSize(divisionName, city, size)
+    }
+    throwParty(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', costPerEmployee: number): number {
+        return this.c.throwParty(divisionName, city, costPerEmployee);
+    }
+    buyTea(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo'): boolean {
+        return this.c.buyTea(divisionName, city);
+    }
+    hireAdVert(divisionName: string): void {
+        return this.c.hireAdVert(divisionName);
+    }
+    research(divisionName: string, researchName: string): void {
+        return this.c.research(divisionName, researchName);
+    }
+    getOffice(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo'): Office {
+        return this.c.getOffice(divisionName, city);
+    }
+    getHireAdVertCost(divisionName: string): number {
+        return this.c.getHireAdVertCost(divisionName);
+    }
+    getHireAdVertCount(divisionName: string): number {
+        return this.c.getHireAdVertCount(divisionName);
+    }
+    getResearchCost(divisionName: string, researchName: string): number {
+        return this.c.getResearchCost(divisionName, researchName);
+    }
+    hasResearched(divisionName: string, researchName: string): boolean {
+        return this.c.hasResearched(divisionName, researchName);
+    }
+    setAutoJobAssignment(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', job: string, amount: number): boolean {
+        return this.c.setAutoJobAssignment(divisionName, city, job, amount);
+    }
+    getOfficeSizeUpgradeCost(divisionName: string, city: CityName | 'Aevum' | 'Chongqing' | 'Ishima' | 'Volhaven' | 'Sector-12' | 'New Tokyo', asize: number): number {
+        return this.c.getOfficeSizeUpgradeCost(divisionName, city, asize);
+    }
+    public getCorporation(): CorporationInfo {
+        return this.c.getCorporation();
+    }
+    public getDivision(divisionName: string): Division {
+        return this.c.getDivision(divisionName)
+    }
+    public getIndustryData(type: CorpIndustryName): CorpIndustryData {
+        return this.c.getIndustryData(type);
+    }
+    //#endregion
+}
+
+
+export async function exportMaterials(ns: NS, divisionName: string) {
+    const c = new CorporationManager(ns)
+    const divisions = c.divisions;
+    const source = c.getDivision(divisionName);
+    const mats = c.getIndustryData(source.type).producedMaterials ?? [];
+    for (let j = 0; j < mats.length; j++) {
+        const m = mats[j];
+        for (let i = 0; i < divisions.length; i++) {
+            const d = divisions[i]
+            if (c.getIndustryData(d.type).requiredMaterials[m] ?? 0 > 0) {
+                ns.print(`adding exports from ${source.name} for ${m} to ${d.name}`)
+                addExport(ns, source.name, {material: m, division: d.name });
+                await ns.sleep(10);
+            }
+        }
+    }
 }
 
 export async function checkWarehouseCap(ns: NS) {
-    const c = ns.corporation;
-    const cities = Object.values(ns.enums.CityName);
-    const corp = c.getCorporation();
-    corp.divisions.map(d => c.getDivision(d)).forEach(division => {
+    const c = new CorporationManager(ns);
+    const divisions = c.divisions
+    divisions.forEach(division => {
         cities.forEach(city => {
             if (c.hasWarehouse(division.name, city)) {
                 const wh = c.getWarehouse(division.name, city)
@@ -73,19 +283,24 @@ export async function checkWarehouseCap(ns: NS) {
 }
 
 export async function growMaterialProducers(ns: NS) {
-    const c = ns.corporation;
-    const cities = Object.values(ns.enums.CityName);
+    const c = new CorporationManager(ns);
     const corp = c.getCorporation();
-    const divisions = corp.divisions.map(d => c.getDivision(d)).filter(d => !d.makesProducts && d.lastCycleRevenue == 0)
+    const divisions = c.divisions
+    const wilsonUpgradeCost = c.getUpgradeLevelCost("Wilson Analytics")
+
+    if (corp.revenue * (1 - corp.dividendRate) * 500 > wilsonUpgradeCost) {
+        ns.print(`waiting for ${"Wilson Analytics"} (${ns.formatNumber(corp.revenue * (1 - corp.dividendRate) * 500)}, ${ns.formatNumber(wilsonUpgradeCost)})`)
+        return;
+    }
     if (divisions.length > 0) {
         const leastCost = divisions
             .map(division => cities
-                .map(city => ({ division, city, cost: c.getOfficeSizeUpgradeCost(division.name, city, 3) }))
+                .map(city => ({ division, city, cost: c.getOfficeSizeUpgradeCost(division.name, city, getOfficeUpgradeSize(c.getOffice(division.name, city))) }))
                 .reduce((pre, cur) => pre.cost < cur.cost ? pre : cur))
             .reduce((pre, cur) => pre.cost < cur.cost ? pre : cur)
         if (corp.funds * 0.5 > leastCost.cost) {
             ns.print(`upgrade ${leastCost.city} division ${leastCost.division.name} for ${ns.formatNumber(leastCost.cost)}`)
-            c.upgradeOfficeSize(leastCost.division.name, leastCost.city, 3);
+            c.upgradeOfficeSize(leastCost.division.name, leastCost.city, getOfficeUpgradeSize(c.getOffice(leastCost.division.name, leastCost.city)));
         }
         divisions.forEach(d => {
             cities.forEach(city => {
@@ -94,11 +309,10 @@ export async function growMaterialProducers(ns: NS) {
             })
         })
     }
-
 }
 
 export function buyProductionMaterials(ns: NS, d: Division, city: CityName, warehouseProdRatio = 0.8, costRatio = 1) {
-    const c = ns.corporation
+    const c = new CorporationManager(ns);
     const prodMaterials = [c.getMaterialData("AI Cores"), c.getMaterialData("Hardware"), c.getMaterialData("Robots"), c.getMaterialData("Real Estate")]
     const warehouse = c.getWarehouse(d.name, city);
     if (warehouse.sizeUsed < warehouse.size * warehouseProdRatio) {
@@ -121,7 +335,7 @@ export function buyProductionMaterials(ns: NS, d: Division, city: CityName, ware
 }
 
 export function ugradeWarehouse(ns: NS, divisionName: string, city: CityName, warehouseProdRatio = 0.8, warehouseCostRatio = 1) {
-    const c = ns.corporation
+    const c = new CorporationManager(ns);
     const warehouse = c.getWarehouse(divisionName, city);
     if (warehouse.sizeUsed > warehouse.size * warehouseProdRatio) {
         if (c.getUpgradeWarehouseCost(divisionName, city) < c.getCorporation().funds * warehouseCostRatio) {
@@ -132,32 +346,35 @@ export function ugradeWarehouse(ns: NS, divisionName: string, city: CityName, wa
 }
 
 export async function checkResearch(ns: NS) {
-    const c = ns.corporation;
+    const c = new CorporationManager(ns);
     const lab = "Hi-Tech R&D Laboratory";
     const marketTA = "Market-TA.I";
     const marketTA2 = "Market-TA.II";
 
     const corp = c.getCorporation();
     corp.divisions.map(d => c.getDivision(d)).forEach(division => {
+        //console.debug(`check ${division.name} research: ${division.researchPoints}`)
         if (division.researchPoints > 10000 && !c.hasResearched(division.name, lab)) {
+            ns.print(`Researching ${lab} for ${division.name}`)
             c.research(division.name, lab);
         }
-        if (division.researchPoints > 1500000 && !c.hasResearched(division.name, marketTA2)) {
+        if (division.researchPoints > 150000 && !c.hasResearched(division.name, marketTA2)) {
+            ns.print(`Researching ${marketTA} for ${division.name}`)
             c.research(division.name, marketTA);
+            ns.print(`Researching ${marketTA2} for ${division.name}`)
             c.research(division.name, marketTA2);
         }
     })
 }
 
 export async function spendMoney(ns: NS, divisionName: string) {
-    const c = ns.corporation;
-    const constants = c.getConstants();
-    const cities = Object.values(ns.enums.CityName);
+    const c = new CorporationManager(ns);
+    const constants = c.constants
     const levelUpgrades: CorpUpgradeName[] = ["Smart Factories", "Smart Storage", "DreamSense", "Wilson Analytics", "Nuoptimal Nootropic Injector Implants", "Speech Processor Implants", "Neural Accelerators", "FocusWires", "ABC SalesBots", "Project Insight"]
     const corp = c.getCorporation();
-    const offices = cities.map(city => c.getOffice(divisionName, city));
+    const offices = c.offices(divisionName);
     const growAveumCost = c.getOfficeSizeUpgradeCost(divisionName, offices[0].city, getOfficeUpgradeSize(offices[0]));
-    const buyAdvertCost = c.getHireAdVertCost(divisionName);    
+    const buyAdvertCost = c.getHireAdVertCost(divisionName);
     const citycosts = Object.fromEntries(offices.map(office => [office.city, c.getOfficeSizeUpgradeCost(divisionName, office.city, getOfficeUpgradeSize(office))]));
     const cheapestCityToUpgrade = cities.reduce((prev, curr) => citycosts[prev] < citycosts[curr] ? prev : curr);
     const wilsonUpgradeCost = c.getUpgradeLevelCost(levelUpgrades[3])
@@ -171,17 +388,17 @@ export async function spendMoney(ns: NS, divisionName: string) {
         c.levelUpgrade(levelUpgrades[3])
         ns.print(`buying ${levelUpgrades[3]}`)
     }
-    else if (corp.revenue * 600 > wilsonUpgradeCost) {
-        ns.print(`waiting for ${levelUpgrades[3]} (${ns.formatNumber(corp.revenue * 600)}, ${ns.formatNumber(wilsonUpgradeCost)})`)
+    else if (corp.revenue * (1 - corp.dividendRate) * 500 > wilsonUpgradeCost) {
+        ns.print(`waiting for ${levelUpgrades[3]} (${ns.formatNumber(corp.revenue * (1 - corp.dividendRate) * 500)}, ${ns.formatNumber(wilsonUpgradeCost)})`)
         return;
 
     }
-    else if (growAveumCost < buyAdvertCost && corp.funds > growAveumCost) {
+    else if (growAveumCost < buyAdvertCost * 5 && corp.funds > growAveumCost) {
         const o = c.getOffice(divisionName, cities[0])
         c.upgradeOfficeSize(divisionName, cities[0], getOfficeUpgradeSize(o))
         ns.print(`Upgrading ${divisionName} office in ${cities[0]}`)
     }
-    else if (buyAdvertCost < corp.funds && corp.funds > buyAdvertCost) {
+    else if (buyAdvertCost * 5 < corp.funds && corp.funds > buyAdvertCost) {
 
         c.hireAdVert(divisionName);
         ns.print(`hiring advert for ${divisionName} (${ns.formatNumber(buyAdvertCost)} < ${ns.formatNumber(growAveumCost)})`);
@@ -190,7 +407,7 @@ export async function spendMoney(ns: NS, divisionName: string) {
         ns.print(`upgrading ${divisionName} office in ${cheapestCityToUpgrade} ${getOfficeUpgradeSize(c.getOffice(divisionName, cheapestCityToUpgrade))}`)
         c.upgradeOfficeSize(divisionName, cheapestCityToUpgrade, getOfficeUpgradeSize(c.getOffice(divisionName, cheapestCityToUpgrade)))
     }
-    else if (upgradeCosts[cheapestUpgrade] < corp.funds && c.getOffice(divisionName, cheapestCityToUpgrade).size > 30) {
+    else if (upgradeCosts[cheapestUpgrade] < corp.funds && (upgradeLevels[cheapestUpgrade] <= 30 || c.getOffice(divisionName, cheapestCityToUpgrade).size > 30)) {
         c.levelUpgrade(cheapestUpgrade);
         ns.print(`leveling upgrade ${cheapestUpgrade}`)
     }
@@ -200,7 +417,6 @@ export async function spendMoney(ns: NS, divisionName: string) {
             buyProductionMaterials(ns, c.getDivision(divisionName), city, 0.6, 0.2)
         })
     }
-
 }
 
 function getOfficeUpgradeSize(office: Office): number {
@@ -229,15 +445,14 @@ export function hirePeople(ns: NS, divisionName: string, city: CityName, distrib
 
 export async function checkProducts(ns: NS, divisionName: string, productPrefix: string, stage: number): Promise<number> {
     const c = ns.corporation;
-    const CityName = ns.enums.CityName
     const div = c.getDivision(divisionName);
-    const cities = [CityName.Aevum, CityName.Chongqing, CityName.NewTokyo, CityName.Ishima, CityName.Volhaven, CityName.Sector12];
     const maxProds = getMaxProducts(divisionName);
     const prods = div.products.map(p => c.getProduct(divisionName, cities[0], p));
     const nextProd = Math.max(...prods.map(p => isNaN(Number.parseInt(p.name.substring(productPrefix.length))) ? 0 : Number.parseInt(p.name.substring(productPrefix.length)))) + 1;
     await discontinueWorstProductIfFull();
     await createNewProductIfNotFull();
     SellAllProducts();
+    await ns.sleep(10);
     return stage;
 
     function SellAllProducts() {
@@ -268,7 +483,7 @@ export async function checkProducts(ns: NS, divisionName: string, productPrefix:
     }
 
     async function discontinueWorstProductIfFull() {
-        if (prods.length == maxProds && prods.filter(p => p.developmentProgress < 100).length == 0) {
+        if (prods.length == maxProds && c.getCorporation().funds > 20 * 1e9 && prods.filter(p => p.developmentProgress < 100).length == 0) {
             stage += 1;
             if (stage > 4) {
                 const worst = prods.reduce((p, c) => p.effectiveRating < c.effectiveRating ? p : c);
@@ -278,7 +493,7 @@ export async function checkProducts(ns: NS, divisionName: string, productPrefix:
                 stage = 0;
             }
             else {
-                ns.print("Products full, maturing");
+                ns.print(`Products full at ${divisionName}, maturing`);
             }
         }
     }
@@ -289,6 +504,7 @@ export async function checkProducts(ns: NS, divisionName: string, productPrefix:
         max += div.makesProducts ? 3 : 0;
         max += c.hasResearched(division, "uPgrade: Capacity.I") ? 1 : 0
         max += c.hasResearched(division, "uPgrade: Capacity.II") ? 1 : 0
+        
         return max;
     }
 }
@@ -307,6 +523,7 @@ export async function teaParty(ns: NS) {
                 //ns.print(`Throwing party for ${division.name} in ${city}`)
                 c.throwParty(division.name, city, 200_000)
             }
+            await ns.sleep(10);
         }
     }
 }
@@ -375,7 +592,7 @@ export const EmployeeDistributions: EmployeeDistribution[] =
             }
         }
     ]
-
+export const cities = [CityName.Aevum, CityName.Chongqing, CityName.NewTokyo, CityName.Ishima, CityName.Volhaven, CityName.Sector12];
 export const Dist = new Map<EmployeeDistributionNames, Distributor>()
 EmployeeDistributions.forEach(d => Dist.set(d.description, d.distribute))
 

@@ -1,6 +1,7 @@
 import { NS } from "@ns";
 
 export async function main(ns: NS): Promise<void> {
+  ns.disableLog("ALL");
   const names = ["Manny", "Joey", "Rocky", "Billy", "Vinny", "Harry", "Nicky", "Paulie", "Charlie", "Rodney", "Sully", "Sonny", "Donny", "Bobby", "Chucky"]
   const g = ns.gang;
   while (g.inGang()) {
@@ -21,17 +22,25 @@ export async function main(ns: NS): Promise<void> {
     members.forEach(m => {
       const info = g.getMemberInformation(m);
       let avgExp = 0;
-      if (gang.isHacking) (avgExp = info.hack_exp)
+      if (gang.isHacking && info.task != "Territory Warfare") (avgExp = info.hack_exp)
       else {
         avgExp = [info.str_exp, info.def_exp, info.dex_exp, info.agi_exp].reduce((pre, cur) => pre + cur, 0)/4
       }
-      if (avgExp > 1000001) {
+      const ascRes = g.getAscensionResult(m)
+      let avgAsc = 0;
+      if (gang.isHacking && info.task != "Territory Warfare") {
+        avgAsc = ascRes?.hack ?? 0
+      }
+      else {
+        avgAsc = [ascRes?.agi ?? 0, ascRes?.def ?? 0, ascRes?.dex ?? 0,  ascRes?.str ?? 0].reduce((pre, cur) => pre + cur, 0)/4
+      }
+      if (avgExp > 1000001 && avgAsc >= 1.2) {
         g.ascendMember(m);
         buyAllAffordableEquipmentForMember(ns, m);
       }
 
     })
-    await ns.sleep(1000)
+    await ns.sleep(10000)
   }
 }
 

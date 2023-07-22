@@ -7,6 +7,7 @@ export async function main(ns: NS) {
   ns.scriptKill('dispatcher.js','home');
   ns.scriptKill('dispatcher2.js', 'home');
   ns.scriptKill('orchestrator.js', 'home');
+  ns.scriptKill('noodles.js', 'home');
   const servers = await explore(ns, 'home');
   servers.push(ns.getServer('home'));
   servers.forEach(s => {
